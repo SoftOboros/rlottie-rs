@@ -33,17 +33,17 @@
 ## 2 Vector Primitives & Path Engine
 |ID| ✔ | Instruction|
 |--|---|-----------|
-|2.1| | Create `geometry::Path` with `Vec<PathSeg>`, where `PathSeg` = `MoveTo(Vec2)`, `LineTo(Vec2)`, `Cubic(Vec2,Vec2,Vec2)`, `Close`.|
-|2.2| | Implement `fn flatten(&self, tolerance:f32) -> SmallVec<[LineSegment;32]>` using recursive subdivision of cubics.|
-|2.3| | Feature‑gate integration with `lyon` tessellator (`simd` feature). Provide blanket fallback tessellator on `no_std`.|
-|2.4| | Provide `no_std` fixed‑point `Vec2Fx` type (Q16.16).|
+|2.1|✔| Create `geometry::Path` with `Vec<PathSeg>`, where `PathSeg` = `MoveTo(Vec2)`, `LineTo(Vec2)`, `Cubic(Vec2,Vec2,Vec2)`, `Close`.|
+|2.2|✔| Implement `fn flatten(&self, tolerance:f32) -> SmallVec<[LineSegment;32]>` using recursive subdivision of cubics.|
+|2.3|✔| Feature‑gate integration with `lyon` tessellator (`simd` feature). Provide blanket fallback tessellator on `no_std`.|
+|2.4|✔| Provide `no_std` fixed‑point `Vec2Fx` type (Q16.16).|
 
 ---
 ## 3 Timeline & Interpolator
 |ID| ✔ | Instruction|
 |--|---|-----------|
-|3.1| | `struct Keyframe<T> { start:u32,end:u32,start_v:T,end_v:T,ease:CubicBezier }`.|
-|3.2| | `fn sample(&self, frame:f32) -> T` using ease LUT (256 entries).|
+|3.1|✔| `struct Keyframe<T> { start:u32,end:u32,start_v:T,end_v:T,ease:CubicBezier }`.|
+|3.2|✔| `fn sample(&self, frame:f32) -> T` using ease LUT (256 entries).|
 |3.3| | `Animator<T>` stores `Vec<Keyframe<T>>`. Implement `Animator::value(frame)`.|
 |3.4| | Attach animators to `Transform` and fill/style props within each `Layer` via `HashMap<&'static str, Animator<Value>>`.|
 
