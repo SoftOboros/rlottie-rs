@@ -94,6 +94,39 @@ All new files **must** carry the header:
 
 ---
 
+## 7 Codex Agent Behavior
+
+The loop runner agent operates as follows:
+
+1. Load `/doc/TODO.md`. Start from the top. For each item:
+   - If it is not checked off (`[ ]`), proceed.
+   - If checked (`[x]`), skip.
+
+2. **Implement the required feature** in Rust based on the C++ rlottie source:
+   - Use the matching file path under `/rlottie/` as your reference.
+   - Match behavior and signatures first — not Rust conventions.
+   - Preserve default values and logic from the C++ side.
+
+3. **Validate with golden test expectations**:
+   - Run `cargo test --all-features`.
+   - Confirm output matches the expected C++ behavior.
+   - If the test fails, retry implementation once.
+   - Do not assume the Rust implementation is correct.
+
+4. **Mark the task complete** by checking the box in `TODO.md`.
+
+5. Repeat until all items in `TODO.md` are complete.
+
+6. Switch to `/doc/TODO-TESTING.md` and repeat steps 1–5 for test cases.
+
+**Important rules:**
+
+- Do not infer behavior from other Rust modules. Trust the C++ source.
+- If C++ logic is unclear or unstable, skip the item and flag it with `⚠️ Needs upstream clarification`.
+- Do not touch publishing or CI setup unless explicitly told.
+
+---
+
 ## TL;DR Checklist
 
 Before opening a PR, run:
