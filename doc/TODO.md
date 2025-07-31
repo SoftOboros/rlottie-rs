@@ -12,22 +12,22 @@
 ## 0 TOML Dependency Setup
 | Step | ✔ | Detailed instruction |
 |------|---|---------------------|
-|0.1| | Create a root `Cargo.toml` **workspace** with members `rlottie_core/` and `examples/`.|
-|0.2| | Add optional **feature flags**: `simd`, `wasm`, `embedded`, `bench`.  Each toggles a `[features]` block.|
-|0.3| | Gate deps:<br>• `lyon` → `feature = "simd"`<br>• `packed_simd_2` → `simd`<br>• `wasm-bindgen` → `wasm`|
-|0.4| | Set release profile:<br>`opt-level="z"`, `lto=true`, `codegen-units=1`, `panic="abort"`, `strip=true`.|
-|0.5| | Add docs.rs metadata:<br>`all-features=true` and `rustdoc-args=["--cfg","docsrs","--cfg","nightly"]`.|
+|0.1|✔| Create a root `Cargo.toml` **workspace** with members `rlottie_core/` and `examples/`.|
+|0.2|✔| Add optional **feature flags**: `simd`, `wasm`, `embedded`, `bench`.  Each toggles a `[features]` block.|
+|0.3|✔| Gate deps:<br>• `lyon` → `feature = "simd"`<br>• `packed_simd_2` → `simd`<br>• `wasm-bindgen` → `wasm`|
+|0.4|✔| Set release profile:<br>`opt-level="z"`, `lto=true`, `codegen-units=1`, `panic="abort"`, `strip=true`.|
+|0.5|✔| Add docs.rs metadata:<br>`all-features=true` and `rustdoc-args=["--cfg","docsrs","--cfg","nightly"]`.|
 
 ---
 ## 1 JSON → IR Parser
 | ID | ✔ | Instruction |
 |----|---|-------------|
-|1.1| | Create `rlottie_core::loader::json` module. Implement `Composition::from_reader<R: Read>(reader) -> Result<Composition>`.|
-|1.2| | Define `struct Composition { width:u32,height:u32,fps:f32,layers:Vec<Layer> }` in `types.rs`.|
-|1.3| | Add `enum Layer { Shape(ShapeLayer), Image(ImageLayer), PreComp(PreCompLayer), Text(TextLayer) }`.|
-|1.4| | Implement transform struct: `Transform { anchor:Vec2, position:Vec2, scale:Vec2, rotation:f32, opacity:f32 }` + `serde` derives.|
-|1.5| | Parse **shape paths** only: support `m,l,c,o` path verbs. Map to proto‑`PathCommand` enum.|
-|1.6| | Add **unit test** fixture `tests/data/min_shape.json` and assert layer count = 1.|
+|1.1|✔| Create `rlottie_core::loader::json` module. Implement `Composition::from_reader<R: Read>(reader) -> Result<Composition>`.|
+|1.2|✔| Define `struct Composition { width:u32,height:u32,fps:f32,layers:Vec<Layer> }` in `types.rs`.|
+|1.3|✔| Add `enum Layer { Shape(ShapeLayer), Image(ImageLayer), PreComp(PreCompLayer), Text(TextLayer) }`.|
+|1.4|✔| Implement transform struct: `Transform { anchor:Vec2, position:Vec2, scale:Vec2, rotation:f32, opacity:f32 }` + `serde` derives.|
+|1.5|✔| Parse **shape paths** only: support `m,l,c,o` path verbs. Map to proto‑`PathCommand` enum.|
+|1.6|✔| Add **unit test** fixture `tests/data/min_shape.json` and assert layer count = 1.|
 
 ---
 ## 2 Vector Primitives & Path Engine
