@@ -6,12 +6,42 @@
 use serde::{Deserialize, Serialize};
 
 /// 2D vector used throughout the engine.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
 pub struct Vec2 {
     /// X coordinate
     pub x: f32,
     /// Y coordinate
     pub y: f32,
+}
+
+/// Fixed-point 2D vector using Q16.16 representation for `no_std` builds.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Vec2Fx {
+    /// X coordinate in Q16.16 format
+    pub x: i32,
+    /// Y coordinate in Q16.16 format
+    pub y: i32,
+}
+
+impl Vec2Fx {
+    /// Scaling factor applied to raw integer values.
+    pub const SCALE: i32 = 1 << 16;
+
+    /// Convert from a floating point [`Vec2`].
+    pub fn from_vec2(v: Vec2) -> Self {
+        Self {
+            x: (v.x * Self::SCALE as f32) as i32,
+            y: (v.y * Self::SCALE as f32) as i32,
+        }
+    }
+
+    /// Convert to a floating point [`Vec2`].
+    pub fn to_vec2(self) -> Vec2 {
+        Vec2 {
+            x: self.x as f32 / Self::SCALE as f32,
+            y: self.y as f32 / Self::SCALE as f32,
+        }
+    }
 }
 
 /// Transform parameters for a layer or object.
@@ -81,4 +111,18 @@ pub struct Composition {
     pub fps: f32,
     /// Flattened layer list
     pub layers: Vec<Layer>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vec2fx_roundtrip() {
+        let v = Vec2 { x: 1.5, y: -2.25 };
+        let fx = Vec2Fx::from_vec2(v);
+        let v2 = fx.to_vec2();
+        assert!((v.x - v2.x).abs() < 0.0001);
+        assert!((v.y - v2.y).abs() < 0.0001);
+    }
 }

@@ -3,5 +3,7 @@
 //! Module: rlottie core library
 //! Mirrors: rlottie
 
+pub mod geometry;
 pub mod loader;
+pub mod timeline;
 pub mod types;
