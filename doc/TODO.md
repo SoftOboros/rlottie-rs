@@ -66,7 +66,7 @@
 - [x] Pre‑comp layers → recursive `Composition` render
 - [x] Image assets → decode PNG/JPEG via `image-rs`
 - [x] Text layers → raster glyphs via `fontdue`
-- [ ] Repeater → dup path with transform per copy
+- [x] Repeater → dup path with transform per copy
 - [x] Time‑remap / loop → adjust frame sampling in `Composition::render(frame)`
 
 ---
