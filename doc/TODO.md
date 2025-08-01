@@ -59,13 +59,13 @@
 ---
 ## 5 Feature‑Parity Checklist
 - [x] Shape solid fills & strokes → uses engine 2 + renderer 4
-- [ ] Gradients (linear, radial) → extend Paint enum
-- [ ] TrimPaths → apply length mask during tessellation
-- [ ] Masks / Mattes → layer compositing with stencil buffer
+- [x] Gradients (linear, radial) → extend Paint enum
+- [x] TrimPaths → apply length mask during tessellation
+- [x] Masks / Mattes → layer compositing with stencil buffer
 - [ ] Rounded corners → path boolean ops or explicit arc segments
-- [ ] Pre‑comp layers → recursive `Composition` render
-- [ ] Image assets → decode PNG/JPEG via `image-rs`
-- [ ] Text layers → raster glyphs via `fontdue`
+- [x] Pre‑comp layers → recursive `Composition` render
+- [x] Image assets → decode PNG/JPEG via `image-rs`
+- [x] Text layers → raster glyphs via `fontdue`
 - [x] Repeater → dup path with transform per copy
 - [x] Time‑remap / loop → adjust frame sampling in `Composition::render(frame)`
 
