@@ -168,6 +168,36 @@ impl<T: Lerp> Keyframe<T> {
     }
 }
 
+/// Sequence of [`Keyframe`]s describing an animated property.
+#[derive(Debug, Clone, Default)]
+pub struct Animator<T> {
+    /// Ordered list of keyframes
+    pub frames: Vec<Keyframe<T>>,
+}
+
+impl<T: Lerp + Default> Animator<T> {
+    /// Sample the animated value at the given frame.
+    pub fn value(&self, frame: f32) -> T {
+        if self.frames.is_empty() {
+            return T::default();
+        }
+        let first = &self.frames[0];
+        if frame <= first.start as f32 {
+            return first.start_v;
+        }
+        let last = &self.frames[self.frames.len() - 1];
+        if frame >= last.end as f32 {
+            return last.end_v;
+        }
+        for kf in &self.frames {
+            if frame >= kf.start as f32 && frame < kf.end as f32 {
+                return kf.sample(frame);
+            }
+        }
+        T::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,5 +234,23 @@ mod tests {
         };
         let v = kf.sample(2.5);
         assert!((v - 0.129162).abs() < 0.0001);
+    }
+
+    #[test]
+    fn animator_value() {
+        let kf = Keyframe {
+            start: 0,
+            end: 10,
+            start_v: 0.0f32,
+            end_v: 1.0,
+            ease: CubicBezier::new(Vec2 { x: 0.42, y: 0.0 }, Vec2 { x: 0.58, y: 1.0 }),
+        };
+        let anim = Animator {
+            frames: vec![kf.clone()],
+        };
+        let v = anim.value(2.5);
+        assert!((v - 0.129162).abs() < 0.0001);
+        assert_eq!(anim.value(-1.0), 0.0);
+        assert_eq!(anim.value(20.0), 1.0);
     }
 }

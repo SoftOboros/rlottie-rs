@@ -44,14 +44,14 @@
 |--|---|-----------|
 |3.1|✔| `struct Keyframe<T> { start:u32,end:u32,start_v:T,end_v:T,ease:CubicBezier }`.|
 |3.2|✔| `fn sample(&self, frame:f32) -> T` using ease LUT (256 entries).|
-|3.3| | `Animator<T>` stores `Vec<Keyframe<T>>`. Implement `Animator::value(frame)`.|
-|3.4| | Attach animators to `Transform` and fill/style props within each `Layer` via `HashMap<&'static str, Animator<Value>>`.|
+|3.3|✔| `Animator<T>` stores `Vec<Keyframe<T>>`. Implement `Animator::value(frame)`.|
+|3.4|✔| Attach animators to `Transform` and fill/style props within each `Layer` via `HashMap<&'static str, Animator<Value>>`.|
 
 ---
 ## 4 Raster Back‑Ends
 |ID| ✔ | Instruction|
 |--|---|-----------|
-|4.1| | `renderer::cpu` → implement `draw_path(Path, Paint, &mut [u8], w,h,stride)` in RGBA8888.|
+|4.1|✔| `renderer::cpu` → implement `draw_path(Path, Paint, &mut [u8], w,h,stride)` in RGBA8888.|
 |4.2| | Enable SIMD span‑fill with `packed_simd_2` behind `simd` feature; provide scalar fallback.|
 |4.3| | `renderer::embedded_graphics` adapter that implements `embedded_graphics::Drawable` for `Composition`.|
 |4.4| | `renderer::wasm` produce `ImageData` via wasm‑bindgen; compile under `wasm32-unknown-unknown`.|
