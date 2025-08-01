@@ -63,7 +63,7 @@
 - [ ] TrimPaths → apply length mask during tessellation
 - [ ] Masks / Mattes → layer compositing with stencil buffer
 - [ ] Rounded corners → path boolean ops or explicit arc segments
-- [ ] Pre‑comp layers → recursive `Composition` render
+- [x] Pre‑comp layers → recursive `Composition` render
 - [ ] Image assets → decode PNG/JPEG via `image-rs`
 - [ ] Text layers → raster glyphs via `fontdue`
 - [ ] Repeater → dup path with transform per copy

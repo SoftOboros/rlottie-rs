@@ -3,7 +3,7 @@
 //! Module: JSON composition loader
 //! Mirrors: rlottie/src/lottie/lottiecomposition.cpp
 
-use crate::types::{Color, Composition, Layer, PathCommand, ShapeLayer, Vec2};
+use crate::types::{Color, Composition, Layer, PathCommand, PreCompLayer, ShapeLayer, Vec2};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
@@ -18,55 +18,19 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
     let start = root.get("ip").and_then(Value::as_f64).unwrap_or(0.0) as u32;
     let end = root.get("op").and_then(Value::as_f64).unwrap_or(0.0) as u32;
     let fps = root.get("fr").and_then(Value::as_f64).unwrap_or(0.0) as f32;
-    let mut layers = Vec::new();
-    if let Some(layer_arr) = root.get("layers").and_then(Value::as_array) {
-        for layer in layer_arr {
-            if layer.get("ty").and_then(Value::as_i64) == Some(4) {
-                let mut paths = Vec::new();
-                let mut fill = None;
-                let mut stroke = None;
-                let mut stroke_width = 1.0;
-                if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
-                    for shape in shape_arr {
-                        if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
-                            match ty {
-                                "sh" => {
-                                    if let Some(d) = shape
-                                        .get("ks")
-                                        .and_then(|k| k.get("d"))
-                                        .and_then(Value::as_str)
-                                    {
-                                        paths.push(parse_path(d));
-                                    }
-                                }
-                                "fl" => {
-                                    fill = parse_color(shape);
-                                }
-                                "st" => {
-                                    stroke = parse_color(shape);
-                                    if let Some(w) = shape
-                                        .get("w")
-                                        .and_then(|k| k.get("k"))
-                                        .and_then(Value::as_f64)
-                                    {
-                                        stroke_width = w as f32;
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-                layers.push(Layer::Shape(ShapeLayer {
-                    paths,
-                    fill,
-                    stroke,
-                    stroke_width,
-                    animators: HashMap::new(),
-                }));
+    let mut assets = HashMap::new();
+    if let Some(asset_arr) = root.get("assets").and_then(Value::as_array) {
+        for asset in asset_arr {
+            if let Some(id) = asset.get("id").and_then(Value::as_str) {
+                assets.insert(id.to_string(), asset.clone());
             }
         }
     }
+    let layers = root
+        .get("layers")
+        .and_then(Value::as_array)
+        .map(|arr| parse_layers(arr, &assets, width, height, fps))
+        .unwrap_or_default();
     Ok(Composition {
         width,
         height,
@@ -81,6 +45,95 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
 pub fn from_slice(data: &[u8]) -> Result<Composition, Box<dyn std::error::Error>> {
     let cursor = std::io::Cursor::new(data);
     from_reader(cursor)
+}
+
+fn parse_layers(
+    arr: &[Value],
+    assets: &HashMap<String, Value>,
+    width: u32,
+    height: u32,
+    fps: f32,
+) -> Vec<Layer> {
+    let mut out = Vec::new();
+    for layer in arr {
+        if let Some(l) = parse_layer(layer, assets, width, height, fps) {
+            out.push(l);
+        }
+    }
+    out
+}
+
+fn parse_layer(
+    layer: &Value,
+    assets: &HashMap<String, Value>,
+    width: u32,
+    height: u32,
+    fps: f32,
+) -> Option<Layer> {
+    match layer.get("ty").and_then(Value::as_i64)? {
+        4 => {
+            let mut paths = Vec::new();
+            let mut fill = None;
+            let mut stroke = None;
+            let mut stroke_width = 1.0;
+            if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
+                for shape in shape_arr {
+                    if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
+                        match ty {
+                            "sh" => {
+                                if let Some(d) = shape
+                                    .get("ks")
+                                    .and_then(|k| k.get("d"))
+                                    .and_then(Value::as_str)
+                                {
+                                    paths.push(parse_path(d));
+                                }
+                            }
+                            "fl" => fill = parse_color(shape),
+                            "st" => {
+                                stroke = parse_color(shape);
+                                if let Some(w) = shape
+                                    .get("w")
+                                    .and_then(|k| k.get("k"))
+                                    .and_then(Value::as_f64)
+                                {
+                                    stroke_width = w as f32;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Some(Layer::Shape(ShapeLayer {
+                paths,
+                fill,
+                stroke,
+                stroke_width,
+                animators: HashMap::new(),
+            }))
+        }
+        0 => {
+            let ref_id = layer.get("refId").and_then(Value::as_str)?;
+            if let Some(asset) = assets.get(ref_id) {
+                if let Some(arr) = asset.get("layers").and_then(Value::as_array) {
+                    let comp = Composition {
+                        width,
+                        height,
+                        start_frame: 0,
+                        end_frame: 0,
+                        fps,
+                        layers: parse_layers(arr, assets, width, height, fps),
+                    };
+                    return Some(Layer::PreComp(PreCompLayer {
+                        comp: Box::new(comp),
+                    }));
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 /// Parse a simple path string using m/l/c/o verbs.
