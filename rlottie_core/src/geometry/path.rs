@@ -15,6 +15,15 @@ pub struct LineSegment {
     pub to: Vec2,
 }
 
+impl LineSegment {
+    /// Calculate the Euclidean length of the segment.
+    pub fn length(&self) -> f32 {
+        let dx = self.to.x - self.from.x;
+        let dy = self.to.y - self.from.y;
+        (dx * dx + dy * dy).sqrt()
+    }
+}
+
 /// Basic path drawing commands.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathSeg {
@@ -61,6 +70,42 @@ impl Path {
     /// Close the current sub-path.
     pub fn close(&mut self) {
         self.segments.push(PathSeg::Close);
+    }
+
+    /// Approximate path length by summing flattened segment lengths.
+    pub fn length(&self, tolerance: f32) -> f32 {
+        self.flatten(tolerance)
+            .iter()
+            .map(LineSegment::length)
+            .sum()
+    }
+
+    /// Return a new path trimmed between `start` and `end` fractions.
+    /// Values are normalized to `[0,1]` and treat `start > end` as a loop.
+    pub fn trim(&self, start: f32, end: f32, tolerance: f32) -> Self {
+        if (start - end).abs() < f32::EPSILON {
+            return Self::new();
+        }
+        if ((start <= 0.0 && end >= 1.0) || (start >= 1.0 && end <= 0.0)) && start != end {
+            return self.clone();
+        }
+
+        let segs = self.flatten(tolerance);
+        if segs.is_empty() {
+            return Self::new();
+        }
+        let total: f32 = segs.iter().map(LineSegment::length).sum();
+        let s = start.clamp(0.0, 1.0) * total;
+        let e = end.clamp(0.0, 1.0) * total;
+
+        if start < end {
+            extract_range(&segs, s, e)
+        } else {
+            let mut first = extract_range(&segs, s, total);
+            let second = extract_range(&segs, 0.0, e);
+            first.segments.extend(second.segments);
+            first
+        }
     }
 
     /// Flatten the path into line segments using recursive subdivision of cubics.
@@ -161,6 +206,51 @@ fn mid(a: Vec2, b: Vec2) -> Vec2 {
     }
 }
 
+fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
+    Vec2 {
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t,
+    }
+}
+
+fn extract_range(segs: &[LineSegment], from: f32, to: f32) -> Path {
+    let mut result = Path::new();
+    if from >= to {
+        return result;
+    }
+    let mut pos = 0.0f32;
+    let mut started = false;
+    for seg in segs {
+        let len = seg.length();
+        let next = pos + len;
+        if next <= from {
+            pos = next;
+            continue;
+        }
+        if pos >= to {
+            break;
+        }
+        let start_t = if from > pos { (from - pos) / len } else { 0.0 };
+        let end_t = if to < next { (to - pos) / len } else { 1.0 };
+        let start_pt = lerp(seg.from, seg.to, start_t);
+        let end_pt = lerp(seg.from, seg.to, end_t);
+        if !started {
+            result.move_to(start_pt);
+            started = true;
+        } else if start_t > 0.0 {
+            result.move_to(start_pt);
+        } else {
+            result.line_to(start_pt);
+        }
+        result.line_to(end_pt);
+        pos = next;
+        if next >= to {
+            break;
+        }
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +270,28 @@ mod tests {
         assert!(segs.len() >= 2);
         assert_eq!(segs.first().unwrap().from, Vec2 { x: 0.0, y: 0.0 });
         assert_eq!(segs.first().unwrap().to, Vec2 { x: 1.0, y: 0.0 });
+    }
+
+    #[test]
+    fn path_trim_half() {
+        let mut path = Path::new();
+        path.move_to(Vec2 { x: 0.0, y: 0.0 });
+        path.line_to(Vec2 { x: 10.0, y: 0.0 });
+        let trimmed = path.trim(0.0, 0.5, 0.01);
+        let segs = trimmed.flatten(0.01);
+        assert_eq!(segs.len(), 1);
+        assert!((segs[0].to.x - 5.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn path_trim_loop() {
+        let mut path = Path::new();
+        path.move_to(Vec2 { x: 0.0, y: 0.0 });
+        path.line_to(Vec2 { x: 10.0, y: 0.0 });
+        let trimmed = path.trim(0.8, 0.2, 0.01);
+        let segs = trimmed.flatten(0.01);
+        assert_eq!(segs.len(), 2);
+        assert!((segs[0].from.x - 8.0).abs() < 1e-5);
+        assert!((segs[1].to.x - 2.0).abs() < 1e-5);
     }
 }

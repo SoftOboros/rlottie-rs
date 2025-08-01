@@ -3,7 +3,7 @@
 //! Module: JSON composition loader
 //! Mirrors: rlottie/src/lottie/lottiecomposition.cpp
 
-use crate::types::{Color, Composition, Layer, PathCommand, PreCompLayer, ShapeLayer, Vec2};
+use crate::types::{Color, Composition, Layer, PathCommand, MatteType, PathCommand, ShapeLayer, Vec2};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
@@ -18,11 +18,80 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
     let start = root.get("ip").and_then(Value::as_f64).unwrap_or(0.0) as u32;
     let end = root.get("op").and_then(Value::as_f64).unwrap_or(0.0) as u32;
     let fps = root.get("fr").and_then(Value::as_f64).unwrap_or(0.0) as f32;
-    let mut assets = HashMap::new();
-    if let Some(asset_arr) = root.get("assets").and_then(Value::as_array) {
-        for asset in asset_arr {
-            if let Some(id) = asset.get("id").and_then(Value::as_str) {
-                assets.insert(id.to_string(), asset.clone());
+    let mut layers = Vec::new();
+    if let Some(layer_arr) = root.get("layers").and_then(Value::as_array) {
+        for layer in layer_arr {
+            if layer.get("ty").and_then(Value::as_i64) == Some(4) {
+                let mut paths = Vec::new();
+                let mut fill = None;
+                let mut stroke = None;
+                let mut stroke_width = 1.0;
+                let is_mask = layer.get("td").and_then(Value::as_i64) == Some(1);
+                let matte = match layer.get("tt").and_then(Value::as_i64) {
+                    Some(1) => Some(MatteType::Alpha),
+                    Some(2) => Some(MatteType::AlphaInv),
+                    _ => None,
+                };
+                let mut trim: Option<(f32, f32)> = None;
+                if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
+                    for shape in shape_arr {
+                        if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
+                            match ty {
+                                "sh" => {
+                                    if let Some(d) = shape
+                                        .get("ks")
+                                        .and_then(|k| k.get("d"))
+                                        .and_then(Value::as_str)
+                                    {
+                                        paths.push(parse_path(d));
+                                    }
+                                }
+                                "fl" => {
+                                    fill = parse_color(shape);
+                                }
+                                "st" => {
+                                    stroke = parse_color(shape);
+                                    if let Some(w) = shape
+                                        .get("w")
+                                        .and_then(|k| k.get("k"))
+                                        .and_then(Value::as_f64)
+                                    {
+                                        stroke_width = w as f32;
+                                    }
+                                }
+                                "tm" => {
+                                    let s = shape
+                                        .get("s")
+                                        .and_then(|v| v.get("k"))
+                                        .and_then(Value::as_f64)
+                                        .unwrap_or(0.0)
+                                        as f32
+                                        / 100.0;
+                                    let e = shape
+                                        .get("e")
+                                        .and_then(|v| v.get("k"))
+                                        .and_then(Value::as_f64)
+                                        .unwrap_or(1.0)
+                                        as f32
+                                        / 100.0;
+                                    trim = Some((s, e));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                layers.push(Layer::Shape(ShapeLayer {
+                    paths,
+                    fill,
+                    stroke,
+                    stroke_width,
+                    mask: None,
+                    animators: HashMap::new(),
+                    is_mask,
+                    matte,
+                    trim,
+                }));
             }
         }
     }
