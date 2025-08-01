@@ -3,3 +3,6 @@
 
 pub mod cpu;
 pub use cpu::*;
+
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+pub mod wasm;

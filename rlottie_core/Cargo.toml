@@ -7,7 +7,7 @@ license = "MIT"
 [features]
 default = []
 simd = ["lyon"]
-wasm = ["wasm-bindgen"]
+wasm = ["wasm-bindgen", "web-sys"]
 embedded = []
 bench = []
 
@@ -17,10 +17,12 @@ serde_json = "1.0"
 smallvec = "1.11"
 lyon = { version = "1.0", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["ImageData"] }
 
 [dev-dependencies]
 proptest = "1"
 image = "0.25.6"
+wasm-bindgen-test = "0.3"
 sha2 = "0.10"
 hex = "0.4"
 

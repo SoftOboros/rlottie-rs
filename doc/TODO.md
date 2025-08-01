@@ -52,13 +52,13 @@
 |ID| ✔ | Instruction|
 |--|---|-----------|
 |4.1|✔| `renderer::cpu` → implement `draw_path(Path, Paint, &mut [u8], w,h,stride)` in RGBA8888.|
-|4.2| | Enable SIMD span‑fill with `packed_simd_2` behind `simd` feature; provide scalar fallback.|
-|4.3| | `renderer::embedded_graphics` adapter that implements `embedded_graphics::Drawable` for `Composition`.|
-|4.4| | `renderer::wasm` produce `ImageData` via wasm‑bindgen; compile under `wasm32-unknown-unknown`.|
+|4.2|⚠️ Needs upstream clarification| Enable SIMD span‑fill with `packed_simd_2` behind `simd` feature; provide scalar fallback.|
+|4.3|⚠️ Needs upstream clarification| `renderer::embedded_graphics` adapter that implements `embedded_graphics::Drawable` for `Composition`.|
+|4.4|✔| `renderer::wasm` produce `ImageData` via wasm‑bindgen; compile under `wasm32-unknown-unknown`.|
 
 ---
 ## 5 Feature‑Parity Checklist
-- [ ] Shape solid fills & strokes → uses engine 2 + renderer 4
+- [x] Shape solid fills & strokes → uses engine 2 + renderer 4
 - [ ] Gradients (linear, radial) → extend Paint enum
 - [ ] TrimPaths → apply length mask during tessellation
 - [ ] Masks / Mattes → layer compositing with stencil buffer
@@ -67,7 +67,7 @@
 - [ ] Image assets → decode PNG/JPEG via `image-rs`
 - [ ] Text layers → raster glyphs via `fontdue`
 - [ ] Repeater → dup path with transform per copy
-- [ ] Time‑remap / loop → adjust frame sampling in `Composition::render(frame)`
+- [x] Time‑remap / loop → adjust frame sampling in `Composition::render(frame)`
 
 ---
 ## 6 Performance & Size
