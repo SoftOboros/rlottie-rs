@@ -3,7 +3,7 @@
 //! Module: JSON composition loader
 //! Mirrors: rlottie/src/lottie/lottiecomposition.cpp
 
-use crate::types::{Color, Composition, Layer, PathCommand, ShapeLayer, Vec2};
+use crate::types::{Color, Composition, Layer, MatteType, PathCommand, ShapeLayer, Vec2};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
@@ -26,6 +26,12 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                 let mut fill = None;
                 let mut stroke = None;
                 let mut stroke_width = 1.0;
+                let is_mask = layer.get("td").and_then(Value::as_i64) == Some(1);
+                let matte = match layer.get("tt").and_then(Value::as_i64) {
+                    Some(1) => Some(MatteType::Alpha),
+                    Some(2) => Some(MatteType::AlphaInv),
+                    _ => None,
+                };
                 let mut trim: Option<(f32, f32)> = None;
                 if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
                     for shape in shape_arr {
@@ -82,6 +88,8 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                     stroke_width,
                     mask: None,
                     animators: HashMap::new(),
+                    is_mask,
+                    matte,
                     trim,
                 }));
             }

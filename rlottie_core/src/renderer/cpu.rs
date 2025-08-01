@@ -4,7 +4,7 @@
 //! Mirrors: rlottie/src/vector/vpainter.cpp (simplified)
 
 use crate::geometry::{tessellate, Path};
-use crate::types::{Color, GradientStop, LinearGradient, Paint, RadialGradient, Vec2};
+use crate::types::{Color, MatteType, Paint, GradientStop, LinearGradient, RadialGradient, Vec2};
 
 /// Fill a path with the given paint into the RGBA8888 buffer.
 pub fn draw_path(
@@ -135,6 +135,64 @@ pub fn draw_stroke_masked(
         fill_triangle_masked(p1, p3, p4, color, mask, buffer, width, height, stride);
     }
 }
+
+/// Rasterize a path into an alpha mask buffer.
+pub fn draw_mask(path: &Path, mask: &mut [u8], width: usize, height: usize) {
+    let mesh = tessellate(path, 0.2);
+    for tri in mesh.indices.chunks(3) {
+        if tri.len() < 3 {
+            continue;
+        }
+        let v0 = mesh.vertices[tri[0] as usize];
+        let v1 = mesh.vertices[tri[1] as usize];
+        let v2 = mesh.vertices[tri[2] as usize];
+        fill_triangle_mask(v0, v1, v2, mask, width, height);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn blend_masked(
+    dest: &mut [u8],
+    src: &[u8],
+    mask: &[u8],
+    matte: MatteType,
+    width: usize,
+    height: usize,
+    stride: usize,
+) {
+    for y in 0..height {
+        for x in 0..width {
+            let o = y * stride + x * 4;
+            let mut m = mask[y * width + x] as f32 / 255.0;
+            if matte == MatteType::AlphaInv {
+                m = 1.0 - m;
+            }
+            let sa = src[o + 3] as f32 / 255.0 * m;
+            if sa == 0.0 {
+                continue;
+            }
+            let sr = src[o] as f32 * m;
+            let sg = src[o + 1] as f32 * m;
+            let sb = src[o + 2] as f32 * m;
+
+            let dr = dest[o] as f32;
+            let dg = dest[o + 1] as f32;
+            let db = dest[o + 2] as f32;
+            let da = dest[o + 3] as f32 / 255.0;
+
+            let ia = 1.0 - sa;
+            let out_a = sa + da * ia;
+            let out_r = sr + dr * ia;
+            let out_g = sg + dg * ia;
+            let out_b = sb + db * ia;
+
+            dest[o] = out_r.min(255.0) as u8;
+            dest[o + 1] = out_g.min(255.0) as u8;
+            dest[o + 2] = out_b.min(255.0) as u8;
+            dest[o + 3] = (out_a * 255.0).min(255.0) as u8;
+        }
+    }
+}
 #[allow(clippy::too_many_arguments)]
 fn fill_triangle_paint(
     a: Vec2,
@@ -164,7 +222,7 @@ fn fill_triangle_paint(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn fill_triangle_masked(
+fn fill_triangle_mask(a: Vec2, b: Vec2, c: Vec2, buf: &mut [u8], width: usize, height: usize) {
     a: Vec2,
     b: Vec2,
     c: Vec2,
@@ -185,6 +243,9 @@ fn fill_triangle_masked(
             let px = x as f32 + 0.5;
             let py = y as f32 + 0.5;
             if inside_triangle(px, py, a, b, c) {
+                let idx = y as usize * width + x as usize;
+                if idx < buf.len() {
+                    buf[idx] = 255;
                 let moff = y as usize * stride + x as usize * 4 + 3;
                 if moff < mask.len() && mask[moff] != 0 {
                     blend_pixel(buf, stride, x as usize, y as usize, color);
