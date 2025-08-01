@@ -21,5 +21,6 @@ pub fn transform_strategy() -> impl Strategy<Value = Transform> {
             scale,
             rotation,
             opacity,
+            animators: std::collections::HashMap::new(),
         })
 }

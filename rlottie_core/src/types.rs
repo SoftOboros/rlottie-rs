@@ -152,6 +152,74 @@ pub struct Composition {
     pub layers: Vec<Layer>,
 }
 
+impl Composition {
+    /// Render a frame into the provided RGBA8888 buffer.
+    pub fn render_sync(
+        &self,
+        _frame: u32,
+        buffer: &mut [u8],
+        width: usize,
+        height: usize,
+        stride: usize,
+    ) {
+        use crate::geometry::Path;
+        use crate::renderer::cpu::draw_path;
+        use crate::types::{Color, Paint, Vec2};
+
+        buffer.fill(0);
+        let sx = width as f32 / self.width as f32;
+        let sy = height as f32 / self.height as f32;
+
+        for layer in &self.layers {
+            if let Layer::Shape(shape) = layer {
+                for cmds in &shape.paths {
+                    let mut path = Path::new();
+                    for cmd in cmds {
+                        match *cmd {
+                            PathCommand::MoveTo(p) => path.move_to(Vec2 {
+                                x: p.x * sx,
+                                y: p.y * sy,
+                            }),
+                            PathCommand::LineTo(p) => path.line_to(Vec2 {
+                                x: p.x * sx,
+                                y: p.y * sy,
+                            }),
+                            PathCommand::CubicTo(c1, c2, p) => path.cubic_to(
+                                Vec2 {
+                                    x: c1.x * sx,
+                                    y: c1.y * sy,
+                                },
+                                Vec2 {
+                                    x: c2.x * sx,
+                                    y: c2.y * sy,
+                                },
+                                Vec2 {
+                                    x: p.x * sx,
+                                    y: p.y * sy,
+                                },
+                            ),
+                            PathCommand::Close => path.close(),
+                        }
+                    }
+                    draw_path(
+                        &path,
+                        Paint::Solid(Color {
+                            r: 0,
+                            g: 0,
+                            b: 0,
+                            a: 255,
+                        }),
+                        buffer,
+                        width,
+                        height,
+                        stride,
+                    );
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
