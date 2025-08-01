@@ -1,5 +1,5 @@
-use image::io::Reader as ImageReader;
 use image::codecs::png::PngEncoder;
+use image::io::Reader as ImageReader;
 use image::{ColorType, ImageEncoder};
 use rlottie_core::types::Composition;
 use sha2::{Digest, Sha256};
