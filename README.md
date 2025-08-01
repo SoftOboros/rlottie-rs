@@ -1,6 +1,9 @@
-# rlottie‑rs
 
-*A pure‑Rust, no‑std‑friendly re‑implementation of Samsung’s *[*`rlottie`*](https://github.com/Samsung/rlottie)* animation engine.*
+<p align="center">
+  <img src="./rlottie-rs-logo.png" alt="rlottie-rs" />
+</p>
+
+<span style="font-size:26px"><b>rlottie-rs</b></span> is a pure‑Rust, no‑std‑friendly re‑implementation of Samsung’s *[*`rlottie`*](https://github.com/Samsung/rlottie)* animation engine.
 
 ---
 
@@ -71,7 +74,7 @@ See `examples/` for more entry‑points.
 
 | Resource             | Link                                                                                       |
 | -------------------- | ------------------------------------------------------------------------------------------ |
-| API docs (nightly)   | [https://softoboros.github.io/rlottie-rs/dev](https://softoboros.github.io/rlottie-rs/dev) |
+| API docs (nightly)   | [https://softoboros.github.io/rlottie-rs/](https://softoboros.github.io/rlottie-rs/dev) |
 | Road‑to‑Parity board | [`doc/TODO.md`](./doc/TODO.md)                                                             |
 | Test‑coverage plan   | [`doc/TODO-TESTING.md`](./doc/TODO-TESTING.md)                                             |
 
