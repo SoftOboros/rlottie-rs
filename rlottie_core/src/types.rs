@@ -58,11 +58,46 @@ pub struct Color {
     pub a: u8,
 }
 
-/// Paint style for filling paths.
+/// A color stop used in gradients.
 #[derive(Debug, Clone, Copy)]
+pub struct GradientStop {
+    /// Offset along the gradient 0..1
+    pub offset: f32,
+    /// Color at this stop
+    pub color: Color,
+}
+
+/// Linear gradient parameters.
+#[derive(Debug, Clone)]
+pub struct LinearGradient {
+    /// Start position in object space
+    pub start: Vec2,
+    /// End position in object space
+    pub end: Vec2,
+    /// Color stops sorted by offset
+    pub stops: Vec<GradientStop>,
+}
+
+/// Radial gradient parameters.
+#[derive(Debug, Clone)]
+pub struct RadialGradient {
+    /// Center of the gradient
+    pub center: Vec2,
+    /// Radius of the gradient
+    pub radius: f32,
+    /// Color stops sorted by offset
+    pub stops: Vec<GradientStop>,
+}
+
+/// Paint style for filling paths.
+#[derive(Debug, Clone)]
 pub enum Paint {
     /// Solid color fill
     Solid(Color),
+    /// Linear gradient fill
+    Linear(LinearGradient),
+    /// Radial gradient fill
+    Radial(RadialGradient),
 }
 
 /// Transform parameters for a layer or object.
@@ -122,6 +157,8 @@ pub struct ShapeLayer {
     pub stroke_width: f32,
     /// Optional mask paths to clip this shape
     pub mask: Option<Vec<Vec<PathCommand>>>,
+    /// Optional trim start/end fractions
+    pub trim: Option<(f32, f32)>,
     /// Animations for fill or stroke properties
     pub animators: HashMap<&'static str, Animator<f32>>,
 }
@@ -271,6 +308,11 @@ impl Composition {
                             PathCommand::Close => path.close(),
                         }
                     }
+                    let render_path = if let Some((s, e)) = shape.trim {
+                        path.trim(s, e, 0.2)
+                    } else {
+                        path.clone()
+                    };
                     if let Some(fill) = shape.fill {
                         if let Some(mask) = mask_buf.as_ref() {
                             draw_path_masked(

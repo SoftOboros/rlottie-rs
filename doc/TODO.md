@@ -59,8 +59,8 @@
 ---
 ## 5 Feature‑Parity Checklist
 - [x] Shape solid fills & strokes → uses engine 2 + renderer 4
-- [ ] Gradients (linear, radial) → extend Paint enum
-- [ ] TrimPaths → apply length mask during tessellation
+- [x] Gradients (linear, radial) → extend Paint enum
+- [x] TrimPaths → apply length mask during tessellation
 - [x] Masks / Mattes → layer compositing with stencil buffer
 - [ ] Rounded corners → path boolean ops or explicit arc segments
 - [ ] Pre‑comp layers → recursive `Composition` render
