@@ -3,7 +3,7 @@
 //! Module: JSON composition loader
 //! Mirrors: rlottie/src/lottie/lottiecomposition.cpp
 
-use crate::types::{Color, Composition, Layer, MatteType, PathCommand, ShapeLayer, Vec2};
+use crate::types::{Color, Composition, Layer, PathCommand, MatteType, PathCommand, ShapeLayer, Vec2};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
@@ -95,6 +95,11 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
             }
         }
     }
+    let layers = root
+        .get("layers")
+        .and_then(Value::as_array)
+        .map(|arr| parse_layers(arr, &assets, width, height, fps))
+        .unwrap_or_default();
     Ok(Composition {
         width,
         height,
@@ -109,6 +114,95 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
 pub fn from_slice(data: &[u8]) -> Result<Composition, Box<dyn std::error::Error>> {
     let cursor = std::io::Cursor::new(data);
     from_reader(cursor)
+}
+
+fn parse_layers(
+    arr: &[Value],
+    assets: &HashMap<String, Value>,
+    width: u32,
+    height: u32,
+    fps: f32,
+) -> Vec<Layer> {
+    let mut out = Vec::new();
+    for layer in arr {
+        if let Some(l) = parse_layer(layer, assets, width, height, fps) {
+            out.push(l);
+        }
+    }
+    out
+}
+
+fn parse_layer(
+    layer: &Value,
+    assets: &HashMap<String, Value>,
+    width: u32,
+    height: u32,
+    fps: f32,
+) -> Option<Layer> {
+    match layer.get("ty").and_then(Value::as_i64)? {
+        4 => {
+            let mut paths = Vec::new();
+            let mut fill = None;
+            let mut stroke = None;
+            let mut stroke_width = 1.0;
+            if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
+                for shape in shape_arr {
+                    if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
+                        match ty {
+                            "sh" => {
+                                if let Some(d) = shape
+                                    .get("ks")
+                                    .and_then(|k| k.get("d"))
+                                    .and_then(Value::as_str)
+                                {
+                                    paths.push(parse_path(d));
+                                }
+                            }
+                            "fl" => fill = parse_color(shape),
+                            "st" => {
+                                stroke = parse_color(shape);
+                                if let Some(w) = shape
+                                    .get("w")
+                                    .and_then(|k| k.get("k"))
+                                    .and_then(Value::as_f64)
+                                {
+                                    stroke_width = w as f32;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Some(Layer::Shape(ShapeLayer {
+                paths,
+                fill,
+                stroke,
+                stroke_width,
+                animators: HashMap::new(),
+            }))
+        }
+        0 => {
+            let ref_id = layer.get("refId").and_then(Value::as_str)?;
+            if let Some(asset) = assets.get(ref_id) {
+                if let Some(arr) = asset.get("layers").and_then(Value::as_array) {
+                    let comp = Composition {
+                        width,
+                        height,
+                        start_frame: 0,
+                        end_frame: 0,
+                        fps,
+                        layers: parse_layers(arr, assets, width, height, fps),
+                    };
+                    return Some(Layer::PreComp(PreCompLayer {
+                        comp: Box::new(comp),
+                    }));
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 /// Parse a simple path string using m/l/c/o verbs.

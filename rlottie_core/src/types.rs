@@ -180,7 +180,10 @@ pub struct ShapeLayer {
 #[derive(Debug, Clone)]
 pub struct ImageLayer;
 #[derive(Debug, Clone)]
-pub struct PreCompLayer;
+pub struct PreCompLayer {
+    /// Nested composition to render
+    pub comp: Box<Composition>,
+}
 #[derive(Debug, Clone)]
 pub struct TextLayer;
 
@@ -405,6 +408,8 @@ impl Composition {
                     mask_buf.fill(0);
                     have_mask = false;
                 }
+            } else if let Layer::PreComp(pre) = layer {
+                pre.comp.render_sync(frame, buffer, width, height, stride);
             }
         }
     }
