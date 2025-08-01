@@ -52,9 +52,9 @@
 |ID| ✔ | Instruction|
 |--|---|-----------|
 |4.1|✔| `renderer::cpu` → implement `draw_path(Path, Paint, &mut [u8], w,h,stride)` in RGBA8888.|
-|4.2| | Enable SIMD span‑fill with `packed_simd_2` behind `simd` feature; provide scalar fallback.|
-|4.3| | `renderer::embedded_graphics` adapter that implements `embedded_graphics::Drawable` for `Composition`.|
-|4.4| | `renderer::wasm` produce `ImageData` via wasm‑bindgen; compile under `wasm32-unknown-unknown`.|
+|4.2|⚠️ Needs upstream clarification| Enable SIMD span‑fill with `packed_simd_2` behind `simd` feature; provide scalar fallback.|
+|4.3|⚠️ Needs upstream clarification| `renderer::embedded_graphics` adapter that implements `embedded_graphics::Drawable` for `Composition`.|
+|4.4|✔| `renderer::wasm` produce `ImageData` via wasm‑bindgen; compile under `wasm32-unknown-unknown`.|
 
 ---
 ## 5 Feature‑Parity Checklist
