@@ -4,8 +4,10 @@
 //! Mirrors: rlottie/src/lottie/lottiemodel.h
 
 use crate::timeline::Animator;
+use fontdue::Font;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// 2D vector used throughout the engine.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
@@ -191,8 +193,20 @@ pub struct PreCompLayer {
     /// Nested composition to render
     pub comp: Box<Composition>,
 }
+
 #[derive(Debug, Clone)]
-pub struct TextLayer;
+pub struct TextLayer {
+    /// UTF-8 string to render
+    pub text: String,
+    /// Text color
+    pub color: Color,
+    /// Font size in pixels
+    pub size: f32,
+    /// Baseline position of the text
+    pub position: Vec2,
+    /// Font used for rasterization
+    pub font: Arc<Font>,
+}
 
 /// Animation layer variants.
 #[derive(Debug, Clone)]
@@ -242,9 +256,9 @@ impl Composition {
         stride: usize,
     ) {
         use crate::geometry::Path;
-        use crate::renderer::cpu::{blend_masked, draw_mask, draw_path, draw_stroke};
+        use crate::renderer::cpu::{blend_masked, draw_mask, draw_path, draw_stroke, draw_text};
         use crate::types::{Color, Paint, Vec2};
-        use crate::renderer::cpu::{draw_path, draw_path_masked, draw_stroke, draw_stroke_masked};
+        use crate::renderer::cpu::{draw_path_masked, draw_stroke, draw_stroke_masked};
 
         let _frame_no = self.frame_at(frame);
 
@@ -346,11 +360,47 @@ impl Composition {
                                 Vec2 {
                                     x: p.x * sx,
                                     y: p.y * sy,
-                                },
-                            ),
-                            PathCommand::Close => path.close(),
+                                }),
+                                PathCommand::CubicTo(c1, c2, p) => path.cubic_to(
+                                    Vec2 {
+                                        x: c1.x * sx,
+                                        y: c1.y * sy,
+                                    },
+                                    Vec2 {
+                                        x: c2.x * sx,
+                                        y: c2.y * sy,
+                                    },
+                                    Vec2 {
+                                        x: p.x * sx,
+                                        y: p.y * sy,
+                                    },
+                                ),
+                                PathCommand::Close => path.close(),
+                            }
+                        }
+                        if let Some(fill) = shape.fill {
+                            draw_path(&path, Paint::Solid(fill), buffer, width, height, stride);
+                        }
+                        if let Some(stroke) = shape.stroke {
+                            draw_stroke(
+                                &path,
+                                shape.stroke_width,
+                                Paint::Solid(stroke),
+                                buffer,
+                                width,
+                                height,
+                                stride,
+                            );
                         }
                     }
+                }
+                Layer::Text(text) => {
+                    let mut tl = text.clone();
+                    tl.position.x *= sx;
+                    tl.position.y *= sy;
+                    draw_text(&tl, buffer, width, height, stride);
+                }
+                _ => {}
                     let render_path = if let Some((s, e)) = shape.trim {
                         path.trim(s, e, 0.2)
                     } else {

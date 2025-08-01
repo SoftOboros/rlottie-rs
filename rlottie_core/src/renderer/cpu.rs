@@ -4,6 +4,7 @@
 //! Mirrors: rlottie/src/vector/vpainter.cpp (simplified)
 
 use crate::geometry::{tessellate, Path};
+use crate::types::TextLayer;
 use crate::types::{Color, MatteType, Paint, GradientStop, LinearGradient, RadialGradient, Vec2};
 
 /// Fill a path with the given paint into the RGBA8888 buffer.
@@ -191,6 +192,37 @@ pub fn blend_masked(
             dest[o + 2] = out_b.min(255.0) as u8;
             dest[o + 3] = (out_a * 255.0).min(255.0) as u8;
         }
+    }
+}
+
+/// Render a [`TextLayer`] into the RGBA8888 buffer.
+pub fn draw_text(layer: &TextLayer, buffer: &mut [u8], width: usize, height: usize, stride: usize) {
+    let mut cursor_x = layer.position.x;
+    let base_y = layer.position.y;
+    for ch in layer.text.chars() {
+        let (metrics, bitmap) = layer.font.rasterize(ch, layer.size);
+        let x0 = cursor_x + metrics.xmin as f32;
+        let y0 = base_y - metrics.height as f32 - metrics.ymin as f32;
+        for y in 0..metrics.height {
+            let yy = y0 as i32 + y as i32;
+            if yy < 0 || yy >= height as i32 {
+                continue;
+            }
+            for x in 0..metrics.width {
+                let xx = x0 as i32 + x as i32;
+                if xx < 0 || xx >= width as i32 {
+                    continue;
+                }
+                let cov = bitmap[y * metrics.width + x];
+                if cov == 0 {
+                    continue;
+                }
+                let mut c = layer.color;
+                c.a = ((cov as u32 * c.a as u32) / 255) as u8;
+                blend_pixel(buffer, stride, xx as usize, yy as usize, c);
+            }
+        }
+        cursor_x += metrics.advance_width;
     }
 }
 #[allow(clippy::too_many_arguments)]
