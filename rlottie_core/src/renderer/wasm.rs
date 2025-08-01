@@ -31,9 +31,12 @@ impl RlottieWasm {
     /// Create a new renderer from Lottie JSON data.
     #[wasm_bindgen(constructor)]
     pub fn new(data: &str) -> Result<RlottieWasm, JsValue> {
-        let comp = json::from_slice(data.as_bytes())
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        Ok(Self { comp, buffer: Vec::new() })
+        let comp =
+            json::from_slice(data.as_bytes()).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        Ok(Self {
+            comp,
+            buffer: Vec::new(),
+        })
     }
 
     /// Number of frames in the animation.
@@ -45,12 +48,7 @@ impl RlottieWasm {
 
     /// Render a specific frame into a new [`ImageData`].
     #[wasm_bindgen]
-    pub fn render(
-        &mut self,
-        _frame: u32,
-        width: u32,
-        height: u32,
-    ) -> Result<ImageData, JsValue> {
+    pub fn render(&mut self, _frame: u32, width: u32, height: u32) -> Result<ImageData, JsValue> {
         let len = (width * height * 4) as usize;
         self.buffer.clear();
         self.buffer.resize(len, 0);
@@ -69,7 +67,12 @@ impl RlottieWasm {
                     }
                     cpu::draw_path(
                         &path,
-                        Paint::Solid(Color { r: 0, g: 0, b: 0, a: 255 }),
+                        Paint::Solid(Color {
+                            r: 0,
+                            g: 0,
+                            b: 0,
+                            a: 255,
+                        }),
                         &mut self.buffer,
                         width as usize,
                         height as usize,
@@ -79,12 +82,8 @@ impl RlottieWasm {
             }
         }
 
-        ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(&self.buffer),
-            width,
-            height,
-        )
-        .map_err(|e| e)
+        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&self.buffer), width, height)
+            .map_err(|e| e)
     }
 }
 

@@ -27,6 +27,48 @@ pub fn draw_path(
         fill_triangle(v0, v1, v2, color, buffer, width, height, stride);
     }
 }
+
+/// Stroke a path with the given paint and width.
+pub fn draw_stroke(
+    path: &Path,
+    width_px: f32,
+    paint: Paint,
+    buffer: &mut [u8],
+    width: usize,
+    height: usize,
+    stride: usize,
+) {
+    let segs = path.flatten(0.2);
+    let Paint::Solid(color) = paint;
+    for seg in segs {
+        let dx = seg.to.x - seg.from.x;
+        let dy = seg.to.y - seg.from.y;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len == 0.0 {
+            continue;
+        }
+        let nx = -dy / len * width_px * 0.5;
+        let ny = dx / len * width_px * 0.5;
+        let p1 = Vec2 {
+            x: seg.from.x + nx,
+            y: seg.from.y + ny,
+        };
+        let p2 = Vec2 {
+            x: seg.from.x - nx,
+            y: seg.from.y - ny,
+        };
+        let p3 = Vec2 {
+            x: seg.to.x - nx,
+            y: seg.to.y - ny,
+        };
+        let p4 = Vec2 {
+            x: seg.to.x + nx,
+            y: seg.to.y + ny,
+        };
+        fill_triangle(p1, p2, p3, color, buffer, width, height, stride);
+        fill_triangle(p1, p3, p4, color, buffer, width, height, stride);
+    }
+}
 #[allow(clippy::too_many_arguments)]
 fn fill_triangle(
     a: Vec2,
@@ -118,5 +160,33 @@ mod tests {
         );
         let off = 3 * 8 * 4 + 3 * 4;
         assert_eq!(&buf[off..off + 4], &[0, 0, 0, 255]);
+    }
+
+    #[test]
+    fn stroke_simple_rect() {
+        let mut path = Path::new();
+        path.move_to(Vec2 { x: 1.0, y: 1.0 });
+        path.line_to(Vec2 { x: 6.0, y: 1.0 });
+        path.line_to(Vec2 { x: 6.0, y: 6.0 });
+        path.line_to(Vec2 { x: 1.0, y: 6.0 });
+        path.close();
+
+        let mut buf = vec![0u8; 8 * 8 * 4];
+        draw_stroke(
+            &path,
+            1.0,
+            Paint::Solid(Color {
+                r: 255,
+                g: 0,
+                b: 0,
+                a: 255,
+            }),
+            &mut buf,
+            8,
+            8,
+            8 * 4,
+        );
+        let off = 1 * 8 * 4 + 1 * 4;
+        assert_eq!(&buf[off..off + 4], &[255, 0, 0, 255]);
     }
 }
