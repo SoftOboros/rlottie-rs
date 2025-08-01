@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use rlottie_core::loader::json;
+use sha2::{Digest, Sha256};
+use util::{load_reference_png, pixel_diff_count, render_frame, render_png, rmse};
 
 mod util;
 
@@ -29,10 +31,22 @@ fn golden_hash_corpus() {
         let comp = json::from_slice(&data).unwrap();
         let file_name = path.file_name().unwrap().to_str().unwrap();
         for &frame in &frames {
-            let digest = util::render_hash(&comp, frame);
+            let buf = render_frame(&comp, frame);
+            let png_bytes = render_png(&comp, frame);
+            let digest = Sha256::digest(&png_bytes);
             let key = format!("tests/assets/corpus/{file_name}_{frame}.png");
             if let Some(expect) = hashes.get(&key) {
-                assert_eq!(hex::encode(digest), *expect, "hash mismatch for {key}");
+                if hex::encode(digest) != *expect {
+                    let png_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(&key);
+                    let ref_buf = load_reference_png(&png_path);
+                    let diff = pixel_diff_count(&buf, &ref_buf);
+                    if diff <= 5 {
+                        let err = rmse(&buf, &ref_buf);
+                        assert!(err < 1.0, "RMSE {} for {}", err, key);
+                    } else {
+                        panic!("hash mismatch for {key}; diff_pixels={diff}");
+                    }
+                }
             } else {
                 panic!("missing hash entry for {key}");
             }

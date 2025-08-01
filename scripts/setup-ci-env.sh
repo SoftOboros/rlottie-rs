@@ -40,3 +40,7 @@ sudo python3 -m venv /opt/venv
 
 # Propagate environment updates to subsequent workflow steps
 echo "PATH=/opt/venv/bin:$HOME/.cargo/bin:$PATH" >> "$GITHUB_ENV"
+
+# Build rlottie and generate PNG corpus + hashes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$SCRIPT_DIR/setup_corpus.sh"
