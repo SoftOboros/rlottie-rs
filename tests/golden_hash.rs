@@ -1,0 +1,1 @@
+../rlottie_core/tests/golden_hash.rs
