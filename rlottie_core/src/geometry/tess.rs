@@ -9,6 +9,39 @@ use super::Path;
 use super::{LineSegment, Path};
 use crate::types::Vec2;
 
+fn arc_to_cubics(center: Vec2, radii: Vec2, start: f32, sweep: f32) -> Vec<(Vec2, Vec2, Vec2)> {
+    let mut out = Vec::new();
+    let segs = (sweep.abs() / 90.0).ceil() as usize;
+    let delta = sweep / segs as f32;
+    let mut a0 = start;
+    for _ in 0..segs {
+        let a1 = a0 + delta;
+        let (s0, c0) = (a0.to_radians().sin(), a0.to_radians().cos());
+        let (s1, c1) = (a1.to_radians().sin(), a1.to_radians().cos());
+        let p0 = Vec2 {
+            x: center.x + radii.x * c0,
+            y: center.y + radii.y * s0,
+        };
+        let p1 = Vec2 {
+            x: center.x + radii.x * c1,
+            y: center.y + radii.y * s1,
+        };
+        let t = (a1 - a0).to_radians();
+        let k = (4.0 / 3.0) * (t / 4.0).tan();
+        let c1p = Vec2 {
+            x: p0.x - k * radii.x * s0,
+            y: p0.y + k * radii.y * c0,
+        };
+        let c2p = Vec2 {
+            x: p1.x + k * radii.x * s1,
+            y: p1.y - k * radii.y * c1,
+        };
+        out.push((c1p, c2p, p1));
+        a0 = a1;
+    }
+    out
+}
+
 /// A simple triangle mesh produced by tessellation.
 #[derive(Debug, Default, Clone)]
 pub struct Mesh {
@@ -57,6 +90,28 @@ fn tessellate_impl(path: &Path, tolerance: f32) -> Mesh {
                     Point::new(c2.x, c2.y),
                     Point::new(p.x, p.y),
                 );
+            }
+            super::PathSeg::Arc {
+                center,
+                radii,
+                start,
+                sweep,
+            } => {
+                let mut first = true;
+                for (c1, c2, p) in arc_to_cubics(center, radii, start, sweep) {
+                    if first {
+                        builder.line_to(Point::new(
+                            center.x + radii.x * start.to_radians().cos(),
+                            center.y + radii.y * start.to_radians().sin(),
+                        ));
+                        first = false;
+                    }
+                    builder.cubic_bezier_to(
+                        Point::new(c1.x, c1.y),
+                        Point::new(c2.x, c2.y),
+                        Point::new(p.x, p.y),
+                    );
+                }
             }
             super::PathSeg::Close => {
                 builder.close();

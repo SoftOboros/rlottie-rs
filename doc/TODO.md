@@ -62,7 +62,7 @@
 - [x] Gradients (linear, radial) → extend Paint enum
 - [x] TrimPaths → apply length mask during tessellation
 - [x] Masks / Mattes → layer compositing with stencil buffer
-- [ ] Rounded corners → path boolean ops or explicit arc segments
+- [x] Rounded corners → path boolean ops or explicit arc segments
 - [x] Pre‑comp layers → recursive `Composition` render
 - [x] Image assets → decode PNG/JPEG via `image-rs`
 - [x] Text layers → raster glyphs via `fontdue`

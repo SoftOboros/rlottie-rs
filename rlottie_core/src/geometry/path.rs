@@ -33,6 +33,17 @@ pub enum PathSeg {
     LineTo(Vec2),
     /// Cubic Bézier curve with two control points and end point.
     Cubic(Vec2, Vec2, Vec2),
+    /// Elliptic arc defined by center, radii and angles in degrees.
+    Arc {
+        /// Center of the ellipse
+        center: Vec2,
+        /// Radii along x and y axis
+        radii: Vec2,
+        /// Start angle in degrees
+        start: f32,
+        /// Sweep angle in degrees (positive is counter-clockwise)
+        sweep: f32,
+    },
     /// Close current sub-path.
     Close,
 }
@@ -67,9 +78,82 @@ impl Path {
         self.segments.push(PathSeg::Cubic(c1, c2, p));
     }
 
+    /// Append an elliptic arc command.
+    pub fn arc(&mut self, center: Vec2, radii: Vec2, start: f32, sweep: f32) {
+        self.segments.push(PathSeg::Arc {
+            center,
+            radii,
+            start,
+            sweep,
+        });
+    }
+
     /// Close the current sub-path.
     pub fn close(&mut self) {
         self.segments.push(PathSeg::Close);
+    }
+
+    /// Add a rounded rectangle path using uniform corner radius.
+    pub fn add_round_rect(&mut self, x: f32, y: f32, w: f32, h: f32, radius: f32) {
+        if w <= 0.0 || h <= 0.0 {
+            return;
+        }
+        let mut rx = radius.min(w / 2.0);
+        let mut ry = radius.min(h / 2.0);
+        if rx < 0.0 {
+            rx = 0.0;
+        }
+        if ry < 0.0 {
+            ry = 0.0;
+        }
+
+        self.move_to(Vec2 { x: x + w - rx, y });
+        self.arc(
+            Vec2 {
+                x: x + w - rx,
+                y: y + ry,
+            },
+            Vec2 { x: rx, y: ry },
+            270.0,
+            90.0,
+        );
+        self.line_to(Vec2 {
+            x: x + w,
+            y: y + h - ry,
+        });
+        self.arc(
+            Vec2 {
+                x: x + w - rx,
+                y: y + h - ry,
+            },
+            Vec2 { x: rx, y: ry },
+            0.0,
+            90.0,
+        );
+        self.line_to(Vec2 {
+            x: x + rx,
+            y: y + h,
+        });
+        self.arc(
+            Vec2 {
+                x: x + rx,
+                y: y + h - ry,
+            },
+            Vec2 { x: rx, y: ry },
+            90.0,
+            90.0,
+        );
+        self.line_to(Vec2 { x, y: y + ry });
+        self.arc(
+            Vec2 {
+                x: x + rx,
+                y: y + ry,
+            },
+            Vec2 { x: rx, y: ry },
+            180.0,
+            90.0,
+        );
+        self.close();
     }
 
     /// Approximate path length by summing flattened segment lengths.
@@ -131,6 +215,40 @@ impl Path {
                 PathSeg::Cubic(c1, c2, p) => {
                     flatten_cubic(current, c1, c2, p, tolerance, &mut result);
                     current = p;
+                }
+                PathSeg::Arc {
+                    center,
+                    radii,
+                    start,
+                    sweep,
+                } => {
+                    let start_rad = start.to_radians();
+                    let sweep_rad = sweep.to_radians();
+                    let segs = ((sweep_rad.abs() * radii.x.max(radii.y)) / tolerance)
+                        .ceil()
+                        .max(1.0) as usize;
+                    let mut a0 = start_rad;
+                    let delta = sweep_rad / segs as f32;
+                    for _ in 0..segs {
+                        let a1 = a0 + delta;
+                        let from = Vec2 {
+                            x: center.x + radii.x * a0.cos(),
+                            y: center.y + radii.y * a0.sin(),
+                        };
+                        let to = Vec2 {
+                            x: center.x + radii.x * a1.cos(),
+                            y: center.y + radii.y * a1.sin(),
+                        };
+                        if current != from {
+                            result.push(LineSegment {
+                                from: current,
+                                to: from,
+                            });
+                        }
+                        result.push(LineSegment { from, to });
+                        current = to;
+                        a0 = a1;
+                    }
                 }
                 PathSeg::Close => {
                     if has_start && current != start {
@@ -293,5 +411,15 @@ mod tests {
         assert_eq!(segs.len(), 2);
         assert!((segs[0].from.x - 8.0).abs() < 1e-5);
         assert!((segs[1].to.x - 2.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn add_round_rect_arc() {
+        let mut path = Path::new();
+        path.add_round_rect(0.0, 0.0, 10.0, 10.0, 2.0);
+        let segs = path.flatten(0.1);
+        assert!(segs.len() > 4);
+        let first = segs.first().unwrap();
+        assert!((first.from.x - 8.0).abs() < 1e-5);
     }
 }
