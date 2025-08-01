@@ -58,11 +58,46 @@ pub struct Color {
     pub a: u8,
 }
 
-/// Paint style for filling paths.
+/// A color stop used in gradients.
 #[derive(Debug, Clone, Copy)]
+pub struct GradientStop {
+    /// Offset along the gradient 0..1
+    pub offset: f32,
+    /// Color at this stop
+    pub color: Color,
+}
+
+/// Linear gradient parameters.
+#[derive(Debug, Clone)]
+pub struct LinearGradient {
+    /// Start position in object space
+    pub start: Vec2,
+    /// End position in object space
+    pub end: Vec2,
+    /// Color stops sorted by offset
+    pub stops: Vec<GradientStop>,
+}
+
+/// Radial gradient parameters.
+#[derive(Debug, Clone)]
+pub struct RadialGradient {
+    /// Center of the gradient
+    pub center: Vec2,
+    /// Radius of the gradient
+    pub radius: f32,
+    /// Color stops sorted by offset
+    pub stops: Vec<GradientStop>,
+}
+
+/// Paint style for filling paths.
+#[derive(Debug, Clone)]
 pub enum Paint {
     /// Solid color fill
     Solid(Color),
+    /// Linear gradient fill
+    Linear(LinearGradient),
+    /// Radial gradient fill
+    Radial(RadialGradient),
 }
 
 /// Type of matte compositing to apply with the previous mask layer.
@@ -129,6 +164,10 @@ pub struct ShapeLayer {
     pub stroke: Option<Color>,
     /// Stroke width in pixels
     pub stroke_width: f32,
+    /// Optional mask paths to clip this shape
+    pub mask: Option<Vec<Vec<PathCommand>>>,
+    /// Optional trim start/end fractions
+    pub trim: Option<(f32, f32)>,
     /// Animations for fill or stroke properties
     pub animators: HashMap<&'static str, Animator<f32>>,
     /// If true this layer acts as a matte for the next layer
@@ -194,7 +233,8 @@ impl Composition {
     ) {
         use crate::geometry::Path;
         use crate::renderer::cpu::{blend_masked, draw_mask, draw_path, draw_stroke};
-        use crate::types::{Paint, Vec2};
+        use crate::types::{Color, Paint, Vec2};
+        use crate::renderer::cpu::{draw_path, draw_path_masked, draw_stroke, draw_stroke_masked};
 
         let _frame_no = self.frame_at(frame);
 
@@ -223,6 +263,22 @@ impl Composition {
                                     y: p.y * sy,
                                 }),
                                 PathCommand::CubicTo(c1, c2, p) => path.cubic_to(
+                let mut mask_buf = None;
+                if let Some(mask_paths) = &shape.mask {
+                    let mut buf_m = vec![0u8; buffer.len()];
+                    for cmds in mask_paths {
+                        let mut mask_path = Path::new();
+                        for cmd in cmds {
+                            match *cmd {
+                                PathCommand::MoveTo(p) => mask_path.move_to(Vec2 {
+                                    x: p.x * sx,
+                                    y: p.y * sy,
+                                }),
+                                PathCommand::LineTo(p) => mask_path.line_to(Vec2 {
+                                    x: p.x * sx,
+                                    y: p.y * sy,
+                                }),
+                                PathCommand::CubicTo(c1, c2, p) => mask_path.cubic_to(
                                     Vec2 {
                                         x: c1.x * sx,
                                         y: c1.y * sy,
@@ -236,13 +292,24 @@ impl Composition {
                                         y: p.y * sy,
                                     },
                                 ),
-                                PathCommand::Close => path.close(),
+                                PathCommand::Close => mask_path.close(),
                             }
                         }
-                        draw_mask(&path, &mut mask_buf, width, height);
+                        draw_path(
+                            &mask_path,
+                            Paint::Solid(Color {
+                                r: 0,
+                                g: 0,
+                                b: 0,
+                                a: 255,
+                            }),
+                            &mut buf_m,
+                            width,
+                            height,
+                            stride,
+                        );
                     }
-                    have_mask = true;
-                    continue;
+                    mask_buf = Some(buf_m);
                 }
 
                 for cmds in &shape.paths {
@@ -274,12 +341,23 @@ impl Composition {
                             PathCommand::Close => path.close(),
                         }
                     }
+                    let render_path = if let Some((s, e)) = shape.trim {
+                        path.trim(s, e, 0.2)
+                    } else {
+                        path.clone()
+                    };
                     if let Some(fill) = shape.fill {
                         if have_mask && shape.matte.is_some() {
                             draw_path(
                                 &path,
                                 Paint::Solid(fill),
                                 &mut layer_buf,
+                        if let Some(mask) = mask_buf.as_ref() {
+                            draw_path_masked(
+                                &path,
+                                Paint::Solid(fill),
+                                mask,
+                                buffer,
                                 width,
                                 height,
                                 stride,
@@ -295,6 +373,13 @@ impl Composition {
                                 shape.stroke_width,
                                 Paint::Solid(stroke),
                                 &mut layer_buf,
+                        if let Some(mask) = mask_buf.as_ref() {
+                            draw_stroke_masked(
+                                &path,
+                                shape.stroke_width,
+                                Paint::Solid(stroke),
+                                mask,
+                                buffer,
                                 width,
                                 height,
                                 stride,

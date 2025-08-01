@@ -21,8 +21,17 @@ pub struct Mesh {
 /// Tessellate a [`Path`] into triangles using the lyon tessellator when
 /// the `simd` feature is enabled. A very naive fan triangulator is used
 /// as a fallback for `no_std` or when lyon is disabled.
-pub fn tessellate(path: &Path, tolerance: f32) -> Mesh {
-    tessellate_impl(path, tolerance)
+/// Tessellate a [`Path`] into triangles, optionally trimming the length to
+/// the range `[start, end]` before tessellation.
+pub fn tessellate(path: &Path, tolerance: f32, mask: Option<(f32, f32)>) -> Mesh {
+    let tmp;
+    let src = if let Some((s, e)) = mask {
+        tmp = path.trim(s, e, tolerance);
+        &tmp
+    } else {
+        path
+    };
+    tessellate_impl(src, tolerance)
 }
 
 #[cfg(feature = "simd")]
@@ -108,7 +117,7 @@ mod tests {
         path.line_to(Vec2 { x: 1.0, y: 1.0 });
         path.line_to(Vec2 { x: 0.0, y: 1.0 });
         path.close();
-        let mesh = tessellate(&path, 0.1);
+        let mesh = tessellate(&path, 0.1, None);
         assert_eq!(mesh.indices.len(), 6);
         assert!(mesh.vertices.len() >= 4);
     }

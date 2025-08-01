@@ -32,6 +32,7 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                     Some(2) => Some(MatteType::AlphaInv),
                     _ => None,
                 };
+                let mut trim: Option<(f32, f32)> = None;
                 if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
                     for shape in shape_arr {
                         if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
@@ -58,6 +59,23 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                                         stroke_width = w as f32;
                                     }
                                 }
+                                "tm" => {
+                                    let s = shape
+                                        .get("s")
+                                        .and_then(|v| v.get("k"))
+                                        .and_then(Value::as_f64)
+                                        .unwrap_or(0.0)
+                                        as f32
+                                        / 100.0;
+                                    let e = shape
+                                        .get("e")
+                                        .and_then(|v| v.get("k"))
+                                        .and_then(Value::as_f64)
+                                        .unwrap_or(1.0)
+                                        as f32
+                                        / 100.0;
+                                    trim = Some((s, e));
+                                }
                                 _ => {}
                             }
                         }
@@ -68,9 +86,11 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                     fill,
                     stroke,
                     stroke_width,
+                    mask: None,
                     animators: HashMap::new(),
                     is_mask,
                     matte,
+                    trim,
                 }));
             }
         }
