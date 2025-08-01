@@ -49,6 +49,12 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
     })
 }
 
+/// Load a composition directly from a byte slice containing Lottie JSON.
+pub fn from_slice(data: &[u8]) -> Result<Composition, Box<dyn std::error::Error>> {
+    let cursor = std::io::Cursor::new(data);
+    from_reader(cursor)
+}
+
 /// Parse a simple path string using m/l/c/o verbs.
 fn parse_path(data: &str) -> Vec<PathCommand> {
     let mut cmds = Vec::new();
@@ -89,6 +95,7 @@ fn parse_path(data: &str) -> Vec<PathCommand> {
 mod tests {
     use super::*;
     use std::fs::File;
+    use std::io::Read;
 
     #[test]
     fn parse_min_shape() {
@@ -97,5 +104,16 @@ mod tests {
         let file = File::open(path).unwrap();
         let comp = from_reader(file).unwrap();
         assert_eq!(comp.layers.len(), 1);
+    }
+
+    #[test]
+    fn from_slice_matches_reader() {
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/data/min_shape.json");
+        let mut bytes = Vec::new();
+        File::open(&path).unwrap().read_to_end(&mut bytes).unwrap();
+        let from_reader_comp = from_reader(File::open(&path).unwrap()).unwrap();
+        let from_slice_comp = from_slice(&bytes).unwrap();
+        assert_eq!(from_reader_comp.layers.len(), from_slice_comp.layers.len());
     }
 }

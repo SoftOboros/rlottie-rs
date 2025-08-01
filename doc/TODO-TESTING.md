@@ -15,9 +15,9 @@
 ## 0 Corpus & Fixtures
 | ID | ✔ | Detailed instruction |
 |----|----|---------------------|
-|0.1| | **Collect corpus** – download 25 public Lottie files (≤ 50 KB each) from *lottiefiles.com* into `tests/assets/corpus/`.|
-|0.2| | Write `scripts/gen_png.sh` – uses **C++ rlottie CLI** to render each file at 240×240, frame 0/30/60 → save as PNG next to JSON.|  
-|0.3| | Hash each PNG with SHA‑256; store map in `tests/assets/hashes.json`.|
+|0.1|✔| **Collect corpus** – download 25 public Lottie files (≤ 50 KB each) from *lottiefiles.com* into `tests/assets/corpus/`.|
+|0.2|✔| Write `scripts/gen_png.sh` – uses **C++ rlottie CLI** to render each file at 240×240, frame 0/30/60 → save as PNG next to JSON.|
+|0.3|✔| Hash each PNG with SHA‑256; store map in `tests/assets/hashes.json`.|
 
 ---
 ## 1 Golden Frame Hash Tests
@@ -39,17 +39,17 @@
 ## 3 Property‑Based Tests
 | ID | ✔ | Instruction |
 |----|----|-------------|
-|3.1| | Integrate `proptest` crate (dev‑dependency).|
-|3.2| | Generate random `Transform` sequences; ensure round‑trip JSON ↔ IR ↔ JSON preserves numeric tolerance < 1e‑3.|
-|3.3| | Random path commands → ensure `flatten(tol)` output ≤ expected segment count bound (property: complexity grows ≤ 2ⁿ).|
+|3.1|✔| Integrate `proptest` crate (dev‑dependency).|
+|3.2|✔| Generate random `Transform` sequences; ensure round‑trip JSON ↔ IR ↔ JSON preserves numeric tolerance < 1e‑3.|
+|3.3|✔| Random path commands → ensure `flatten(tol)` output ≤ expected segment count bound (property: complexity grows ≤ 2ⁿ).|
 
 ---
 ## 4 Fuzzing
 | ID | ✔ | Instruction |
 |----|----|-------------|
-|4.1| | Add `cargo fuzz` target `fuzz_json`: takes arbitrary bytes, attempts `Composition::from_slice()`.|
-|4.2| | Enable ASan & UBSan (`-Zsanitizer=address`) in fuzz config.|
-|4.3| | Corpus starts with 5 real Lottie files + dictionary of JSON tokens.|
+|4.1|✔| Add `cargo fuzz` target `fuzz_json`: takes arbitrary bytes, attempts `Composition::from_slice()`.|
+|4.2|✔| Enable ASan & UBSan (`-Zsanitizer=address`) in fuzz config.|
+|4.3|✔| Corpus starts with 5 real Lottie files + dictionary of JSON tokens.|
 
 ---
 ## 5 Performance Benchmarks

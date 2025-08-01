@@ -89,3 +89,5 @@ coverage/
 rlottie/build/
 rlottie/bin/
 rlottie/*.o
+scripts/lottie2png
+tests/assets/corpus/*.png
