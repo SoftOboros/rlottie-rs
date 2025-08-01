@@ -71,7 +71,7 @@
 
 ---
 ## 6 Performance & Size
-- [ ] Add `benches/render.rs` using `criterion`; measure ms/frame 240×240 @ 60 fps.
+- [x] Add `benches/render.rs` using `criterion`; measure ms/frame 240×240 @ 60 fps.
 - [ ] Integrate `cargo bloat --release` in CI; fail if binary > 600 kB (embedded profile).
 - [ ] SIMD vs scalar regression → bench group tags.
 - [ ] Tile cache: static layer bitmaps reused across frames.
@@ -96,4 +96,12 @@
 
 ---
 *(Testing roadmap will be authored in **/doc/TODO-TESTING.doc**.)
+
+---
+## 10 Loader Feature Gate
+- [ ] Add `loader` Cargo feature gating JSON parser; default `loader` on.
+- [ ] Mark `pub mod loader` and JSON functions with `#[cfg(feature = "loader")]`.
+- [ ] Update tests/examples to enable `loader` when required.
+- [ ] Provide `examples/pre_render.rs` to convert JSON to frame bitmaps.
+- [ ] Document embedded workflow in `README.md`.
 
