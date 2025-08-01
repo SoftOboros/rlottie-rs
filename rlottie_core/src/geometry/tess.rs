@@ -9,6 +9,8 @@ use super::Path;
 use super::{LineSegment, Path};
 use crate::types::Vec2;
 
+#[cfg(feature = "simd")]
+/// Convert an elliptical arc into cubic Bézier segments for lyon.
 fn arc_to_cubics(center: Vec2, radii: Vec2, start: f32, sweep: f32) -> Vec<(Vec2, Vec2, Vec2)> {
     let mut out = Vec::new();
     let segs = (sweep.abs() / 90.0).ceil() as usize;
