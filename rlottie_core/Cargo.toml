@@ -27,6 +27,7 @@ proptest = "1"
 wasm-bindgen-test = "0.3"
 sha2 = "0.10"
 hex = "0.4"
+criterion = "0.5"
 
 [package.metadata.docs.rs]
 all-features = true
