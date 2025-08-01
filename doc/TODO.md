@@ -64,7 +64,7 @@
 - [x] Masks / Mattes → layer compositing with stencil buffer
 - [ ] Rounded corners → path boolean ops or explicit arc segments
 - [x] Pre‑comp layers → recursive `Composition` render
-- [ ] Image assets → decode PNG/JPEG via `image-rs`
+- [x] Image assets → decode PNG/JPEG via `image-rs`
 - [ ] Text layers → raster glyphs via `fontdue`
 - [ ] Repeater → dup path with transform per copy
 - [x] Time‑remap / loop → adjust frame sampling in `Composition::render(frame)`
