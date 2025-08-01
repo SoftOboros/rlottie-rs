@@ -17,3 +17,6 @@ serde_json = "1.0"
 smallvec = "1.11"
 lyon = { version = "1.0", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
+
+[dev-dependencies]
+proptest = "1"
