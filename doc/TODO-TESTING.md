@@ -23,9 +23,9 @@
 ## 1 Golden Frame Hash Tests
 | ID | ✔ | Instruction |
 |----|----|-------------|
-|1.1| | Add `tests/golden_hash.rs` that iterates corpus, renders same frames via **Rust** engine, converts to PNG (or raw RGBA) and hashes.|
+|1.1|✔| Add `tests/golden_hash.rs` that iterates corpus, renders same frames via **Rust** engine, converts to PNG (or raw RGBA) and hashes.|
 |1.2| | Assert computed SHA‑256 matches reference hash ± optional tolerance (allow ≤ 5 pixel diff → fallback to RMSE check).|
-|1.3| | Bite‑size: implement helper `fn render_hash(anim:&Composition, frame:u32)->[u8;32]`.|
+|1.3|✔| Bite‑size: implement helper `fn render_hash(anim:&Composition, frame:u32)->[u8;32]`.|
 
 ---
 ## 2 Visual Diff CLI
