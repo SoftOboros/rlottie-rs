@@ -3,7 +3,7 @@
 //! Module: JSON composition loader
 //! Mirrors: rlottie/src/lottie/lottiecomposition.cpp
 
-use crate::types::{Color, Composition, Layer, PathCommand, ShapeLayer, Vec2};
+use crate::types::{Color, Composition, Layer, PathCommand, ShapeLayer, Transform, Vec2};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Read;
@@ -26,6 +26,7 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                 let mut fill = None;
                 let mut stroke = None;
                 let mut stroke_width = 1.0;
+                let mut repeater: Option<(u32, Transform)> = None;
                 if let Some(shape_arr) = layer.get("shapes").and_then(Value::as_array) {
                     for shape in shape_arr {
                         if let Some(ty) = shape.get("ty").and_then(Value::as_str) {
@@ -52,8 +53,19 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                                         stroke_width = w as f32;
                                     }
                                 }
+                                "rp" => {
+                                    repeater = parse_repeater(shape);
+                                }
                                 _ => {}
                             }
+                        }
+                    }
+                }
+                if let Some((copies, tr)) = repeater {
+                    let original = paths.clone();
+                    for i in 1..copies {
+                        for cmds in &original {
+                            paths.push(apply_transform(cmds, &tr, i as f32));
                         }
                     }
                 }
@@ -141,6 +153,93 @@ fn parse_color(obj: &Value) -> Option<Color> {
     None
 }
 
+fn parse_repeater(obj: &Value) -> Option<(u32, Transform)> {
+    let copies = obj
+        .get("c")
+        .and_then(|c| c.get("k"))
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0) as u32;
+    if copies <= 1 {
+        return None;
+    }
+    let mut tr = Transform::default();
+    if let Some(t) = obj.get("tr") {
+        if let Some(p) = t
+            .get("p")
+            .and_then(|k| k.get("k"))
+            .and_then(Value::as_array)
+        {
+            if p.len() >= 2 {
+                tr.position = Vec2 {
+                    x: p[0].as_f64().unwrap_or(0.0) as f32,
+                    y: p[1].as_f64().unwrap_or(0.0) as f32,
+                };
+            }
+        }
+        if let Some(s) = t
+            .get("s")
+            .and_then(|k| k.get("k"))
+            .and_then(Value::as_array)
+        {
+            if s.len() >= 2 {
+                tr.scale = Vec2 {
+                    x: s[0].as_f64().unwrap_or(100.0) as f32 / 100.0,
+                    y: s[1].as_f64().unwrap_or(100.0) as f32 / 100.0,
+                };
+            }
+        }
+        if let Some(r) = t.get("r").and_then(|k| k.get("k")).and_then(Value::as_f64) {
+            tr.rotation = r as f32;
+        }
+        if let Some(a) = t
+            .get("a")
+            .and_then(|k| k.get("k"))
+            .and_then(Value::as_array)
+        {
+            if a.len() >= 2 {
+                tr.anchor = Vec2 {
+                    x: a[0].as_f64().unwrap_or(0.0) as f32,
+                    y: a[1].as_f64().unwrap_or(0.0) as f32,
+                };
+            }
+        }
+    }
+    Some((copies, tr))
+}
+
+fn apply_transform(cmds: &[PathCommand], tr: &Transform, idx: f32) -> Vec<PathCommand> {
+    cmds.iter()
+        .map(|c| match *c {
+            PathCommand::MoveTo(p) => PathCommand::MoveTo(apply_point(p, tr, idx)),
+            PathCommand::LineTo(p) => PathCommand::LineTo(apply_point(p, tr, idx)),
+            PathCommand::CubicTo(c1, c2, p) => PathCommand::CubicTo(
+                apply_point(c1, tr, idx),
+                apply_point(c2, tr, idx),
+                apply_point(p, tr, idx),
+            ),
+            PathCommand::Close => PathCommand::Close,
+        })
+        .collect()
+}
+
+fn apply_point(p: Vec2, tr: &Transform, idx: f32) -> Vec2 {
+    let angle = tr.rotation.to_radians() * idx;
+    let cos = angle.cos();
+    let sin = angle.sin();
+    let mut x = p.x - tr.anchor.x;
+    let mut y = p.y - tr.anchor.y;
+    let sx = tr.scale.x.powf(idx);
+    let sy = tr.scale.y.powf(idx);
+    x *= sx;
+    y *= sy;
+    let xr = x * cos - y * sin;
+    let yr = x * sin + y * cos;
+    Vec2 {
+        x: xr + tr.anchor.x + tr.position.x * idx,
+        y: yr + tr.anchor.y + tr.position.y * idx,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,6 +275,19 @@ mod tests {
         if let Layer::Shape(shape) = &comp.layers[0] {
             assert!(shape.fill.is_some());
             assert!(shape.stroke.is_some());
+        } else {
+            panic!("expected shape layer");
+        }
+    }
+
+    #[test]
+    fn parse_repeater() {
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/data/repeater.json");
+        let file = File::open(path).unwrap();
+        let comp = from_reader(file).unwrap();
+        if let Layer::Shape(shape) = &comp.layers[0] {
+            assert!(shape.paths.len() > 1);
         } else {
             panic!("expected shape layer");
         }
