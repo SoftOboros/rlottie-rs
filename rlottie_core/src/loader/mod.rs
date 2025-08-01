@@ -4,3 +4,4 @@
 //! Mirrors: rlottie/src/lottie.cpp
 
 pub mod json;
+pub use json::*;

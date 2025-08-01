@@ -23,3 +23,10 @@ proptest = "1"
 image = "0.25.6"
 sha2 = "0.10"
 hex = "0.4"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--cfg", "nightly"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(nightly)"] }
