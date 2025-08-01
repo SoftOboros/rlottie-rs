@@ -120,6 +120,8 @@ pub struct ShapeLayer {
     pub stroke: Option<Color>,
     /// Stroke width in pixels
     pub stroke_width: f32,
+    /// Optional trim start/end fractions
+    pub trim: Option<(f32, f32)>,
     /// Animations for fill or stroke properties
     pub animators: HashMap<&'static str, Animator<f32>>,
 }
@@ -220,12 +222,24 @@ impl Composition {
                             PathCommand::Close => path.close(),
                         }
                     }
+                    let render_path = if let Some((s, e)) = shape.trim {
+                        path.trim(s, e, 0.2)
+                    } else {
+                        path.clone()
+                    };
                     if let Some(fill) = shape.fill {
-                        draw_path(&path, Paint::Solid(fill), buffer, width, height, stride);
+                        draw_path(
+                            &render_path,
+                            Paint::Solid(fill),
+                            buffer,
+                            width,
+                            height,
+                            stride,
+                        );
                     }
                     if let Some(stroke) = shape.stroke {
                         draw_stroke(
-                            &path,
+                            &render_path,
                             shape.stroke_width,
                             Paint::Solid(stroke),
                             buffer,
