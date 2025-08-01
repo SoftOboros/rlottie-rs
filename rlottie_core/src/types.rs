@@ -120,6 +120,8 @@ pub struct ShapeLayer {
     pub stroke: Option<Color>,
     /// Stroke width in pixels
     pub stroke_width: f32,
+    /// Optional mask paths to clip this shape
+    pub mask: Option<Vec<Vec<PathCommand>>>,
     /// Animations for fill or stroke properties
     pub animators: HashMap<&'static str, Animator<f32>>,
 }
@@ -180,8 +182,8 @@ impl Composition {
         stride: usize,
     ) {
         use crate::geometry::Path;
-        use crate::renderer::cpu::{draw_path, draw_stroke};
-        use crate::types::{Paint, Vec2};
+        use crate::renderer::cpu::{draw_path, draw_path_masked, draw_stroke, draw_stroke_masked};
+        use crate::types::{Color, Paint, Vec2};
 
         let _frame_no = self.frame_at(frame);
 
@@ -191,6 +193,55 @@ impl Composition {
 
         for layer in &self.layers {
             if let Layer::Shape(shape) = layer {
+                let mut mask_buf = None;
+                if let Some(mask_paths) = &shape.mask {
+                    let mut buf_m = vec![0u8; buffer.len()];
+                    for cmds in mask_paths {
+                        let mut mask_path = Path::new();
+                        for cmd in cmds {
+                            match *cmd {
+                                PathCommand::MoveTo(p) => mask_path.move_to(Vec2 {
+                                    x: p.x * sx,
+                                    y: p.y * sy,
+                                }),
+                                PathCommand::LineTo(p) => mask_path.line_to(Vec2 {
+                                    x: p.x * sx,
+                                    y: p.y * sy,
+                                }),
+                                PathCommand::CubicTo(c1, c2, p) => mask_path.cubic_to(
+                                    Vec2 {
+                                        x: c1.x * sx,
+                                        y: c1.y * sy,
+                                    },
+                                    Vec2 {
+                                        x: c2.x * sx,
+                                        y: c2.y * sy,
+                                    },
+                                    Vec2 {
+                                        x: p.x * sx,
+                                        y: p.y * sy,
+                                    },
+                                ),
+                                PathCommand::Close => mask_path.close(),
+                            }
+                        }
+                        draw_path(
+                            &mask_path,
+                            Paint::Solid(Color {
+                                r: 0,
+                                g: 0,
+                                b: 0,
+                                a: 255,
+                            }),
+                            &mut buf_m,
+                            width,
+                            height,
+                            stride,
+                        );
+                    }
+                    mask_buf = Some(buf_m);
+                }
+
                 for cmds in &shape.paths {
                     let mut path = Path::new();
                     for cmd in cmds {
@@ -221,18 +272,43 @@ impl Composition {
                         }
                     }
                     if let Some(fill) = shape.fill {
-                        draw_path(&path, Paint::Solid(fill), buffer, width, height, stride);
+                        if let Some(mask) = mask_buf.as_ref() {
+                            draw_path_masked(
+                                &path,
+                                Paint::Solid(fill),
+                                mask,
+                                buffer,
+                                width,
+                                height,
+                                stride,
+                            );
+                        } else {
+                            draw_path(&path, Paint::Solid(fill), buffer, width, height, stride);
+                        }
                     }
                     if let Some(stroke) = shape.stroke {
-                        draw_stroke(
-                            &path,
-                            shape.stroke_width,
-                            Paint::Solid(stroke),
-                            buffer,
-                            width,
-                            height,
-                            stride,
-                        );
+                        if let Some(mask) = mask_buf.as_ref() {
+                            draw_stroke_masked(
+                                &path,
+                                shape.stroke_width,
+                                Paint::Solid(stroke),
+                                mask,
+                                buffer,
+                                width,
+                                height,
+                                stride,
+                            );
+                        } else {
+                            draw_stroke(
+                                &path,
+                                shape.stroke_width,
+                                Paint::Solid(stroke),
+                                buffer,
+                                width,
+                                height,
+                                stride,
+                            );
+                        }
                     }
                 }
             }
