@@ -7,6 +7,10 @@ pub fn vec2_strategy() -> impl Strategy<Value = Vec2> {
     (-1000.0f32..1000.0f32, -1000.0f32..1000.0f32).prop_map(|(x, y)| Vec2 { x, y })
 }
 
+pub fn vec2_positive_strategy() -> impl Strategy<Value = Vec2> {
+    (0.0f32..100.0f32, 0.0f32..100.0f32).prop_map(|(x, y)| Vec2 { x, y })
+}
+
 pub fn transform_strategy() -> impl Strategy<Value = Transform> {
     (
         vec2_strategy(),

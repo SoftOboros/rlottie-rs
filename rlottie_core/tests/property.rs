@@ -35,6 +35,7 @@ proptest! {
                 }
                 PathSeg::LineTo(p) => if started { path.line_to(*p); },
                 PathSeg::Cubic(c1, c2, p) => if started { path.cubic_to(*c1, *c2, *p); },
+                PathSeg::Arc{center,radii,start,sweep} => if started { path.arc(*center,*radii,*start,*sweep); },
                 PathSeg::Close => if started { path.close(); started = false; },
             }
         }
@@ -55,6 +56,18 @@ fn path_seg_strategy() -> impl Strategy<Value = PathSeg> {
             testutil::vec2_strategy()
         )
             .prop_map(|(c1, c2, p)| PathSeg::Cubic(c1, c2, p)),
+        (
+            testutil::vec2_positive_strategy(),
+            testutil::vec2_positive_strategy(),
+            -360.0f32..=360.0f32,
+            -360.0f32..=360.0f32,
+        )
+            .prop_map(|(c, r, s, w)| PathSeg::Arc {
+                center: c,
+                radii: r,
+                start: s,
+                sweep: w,
+            }),
         Just(PathSeg::Close),
     ]
 }
