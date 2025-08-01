@@ -5,7 +5,7 @@
 
 use crate::geometry::{tessellate, Path};
 use crate::types::TextLayer;
-use crate::types::{Color, MatteType, Paint, GradientStop, LinearGradient, RadialGradient, Vec2};
+use crate::types::{Color, GradientStop, LinearGradient, MatteType, Paint, RadialGradient, Vec2};
 
 /// Fill a path with the given paint into the RGBA8888 buffer.
 pub fn draw_path(
@@ -17,7 +17,9 @@ pub fn draw_path(
     stride: usize,
 ) {
     let mesh = tessellate(path, 0.2, None);
-    let Paint::Solid(color) = paint;
+    if let Paint::Solid(_) = paint {
+        // solid fill handled; other paints use sampling
+    }
     for tri in mesh.indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -80,8 +82,10 @@ pub fn draw_path_masked(
     height: usize,
     stride: usize,
 ) {
-    let mesh = tessellate(path, 0.2);
-    let Paint::Solid(color) = paint;
+    let mesh = tessellate(path, 0.2, None);
+    let Paint::Solid(color) = paint else {
+        return;
+    };
     for tri in mesh.indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -106,7 +110,9 @@ pub fn draw_stroke_masked(
     stride: usize,
 ) {
     let segs = path.flatten(0.2);
-    let Paint::Solid(color) = paint;
+    let Paint::Solid(color) = paint else {
+        return;
+    };
     for seg in segs {
         let dx = seg.to.x - seg.from.x;
         let dy = seg.to.y - seg.from.y;
@@ -139,7 +145,7 @@ pub fn draw_stroke_masked(
 
 /// Rasterize a path into an alpha mask buffer.
 pub fn draw_mask(path: &Path, mask: &mut [u8], width: usize, height: usize) {
-    let mesh = tessellate(path, 0.2);
+    let mesh = tessellate(path, 0.2, None);
     for tri in mesh.indices.chunks(3) {
         if tri.len() < 3 {
             continue;
@@ -255,6 +261,27 @@ fn fill_triangle_paint(
 
 #[allow(clippy::too_many_arguments)]
 fn fill_triangle_mask(a: Vec2, b: Vec2, c: Vec2, buf: &mut [u8], width: usize, height: usize) {
+    let min_x = a.x.min(b.x).min(c.x).floor().max(0.0) as i32;
+    let max_x = a.x.max(b.x).max(c.x).ceil().min(width as f32) as i32;
+    let min_y = a.y.min(b.y).min(c.y).floor().max(0.0) as i32;
+    let max_y = a.y.max(b.y).max(c.y).ceil().min(height as f32) as i32;
+
+    for y in min_y..max_y {
+        for x in min_x..max_x {
+            let px = x as f32 + 0.5;
+            let py = y as f32 + 0.5;
+            if inside_triangle(px, py, a, b, c) {
+                let idx = y as usize * width + x as usize;
+                if idx < buf.len() {
+                    buf[idx] = 255;
+                }
+            }
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fill_triangle_masked(
     a: Vec2,
     b: Vec2,
     c: Vec2,
@@ -275,9 +302,6 @@ fn fill_triangle_mask(a: Vec2, b: Vec2, c: Vec2, buf: &mut [u8], width: usize, h
             let px = x as f32 + 0.5;
             let py = y as f32 + 0.5;
             if inside_triangle(px, py, a, b, c) {
-                let idx = y as usize * width + x as usize;
-                if idx < buf.len() {
-                    buf[idx] = 255;
                 let moff = y as usize * stride + x as usize * 4 + 3;
                 if moff < mask.len() && mask[moff] != 0 {
                     blend_pixel(buf, stride, x as usize, y as usize, color);
@@ -360,13 +384,11 @@ fn sample_stops(stops: &[GradientStop], t: f32) -> Color {
 }
 
 fn sample_linear(g: &LinearGradient, p: Vec2) -> Color {
-    let dx = g.end.x - g.start.x;
-    let dy = g.end.y - g.start.y;
-    let len_sq = dx * dx + dy * dy;
-    let t = if len_sq == 0.0 {
-        0.0
+    let span = g.end.x - g.start.x;
+    let t = if span.abs() > 0.0 {
+        ((p.x - g.start.x) / span).clamp(0.0, 1.0)
     } else {
-        ((p.x - g.start.x) * dx + (p.y - g.start.y) * dy) / len_sq
+        0.0
     };
     sample_stops(&g.stops, t)
 }
