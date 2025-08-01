@@ -15,7 +15,8 @@ pub fn draw_path(
     height: usize,
     stride: usize,
 ) {
-    let mesh = tessellate(path, 0.2);
+    let mesh = tessellate(path, 0.2, None);
+    let Paint::Solid(color) = paint;
     for tri in mesh.indices.chunks(3) {
         if tri.len() < 3 {
             continue;
