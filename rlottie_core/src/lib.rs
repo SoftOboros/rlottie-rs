@@ -5,5 +5,6 @@
 
 pub mod geometry;
 pub mod loader;
+pub mod renderer;
 pub mod timeline;
 pub mod types;

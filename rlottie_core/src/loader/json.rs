@@ -5,6 +5,7 @@
 
 use crate::types::{Composition, Layer, PathCommand, ShapeLayer, Vec2};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::io::Read;
 
 /// Load a composition from a reader containing Lottie JSON.
@@ -33,7 +34,10 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                         }
                     }
                 }
-                layers.push(Layer::Shape(ShapeLayer { paths }));
+                layers.push(Layer::Shape(ShapeLayer {
+                    paths,
+                    animators: HashMap::new(),
+                }));
             }
         }
     }

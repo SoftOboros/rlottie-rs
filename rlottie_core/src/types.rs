@@ -3,7 +3,9 @@
 //! Module: type definitions
 //! Mirrors: rlottie/src/lottie/lottiemodel.h
 
+use crate::timeline::Animator;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 2D vector used throughout the engine.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
@@ -43,6 +45,25 @@ impl Vec2Fx {
         }
     }
 }
+/// RGBA color in 8-bit per channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Color {
+    /// Red channel
+    pub r: u8,
+    /// Green channel
+    pub g: u8,
+    /// Blue channel
+    pub b: u8,
+    /// Alpha channel
+    pub a: u8,
+}
+
+/// Paint style for filling paths.
+#[derive(Debug, Clone, Copy)]
+pub enum Paint {
+    /// Solid color fill
+    Solid(Color),
+}
 
 /// Transform parameters for a layer or object.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +78,22 @@ pub struct Transform {
     pub rotation: f32,
     /// Opacity 0..1
     pub opacity: f32,
+    /// Property animations keyed by name
+    #[serde(skip)]
+    pub animators: HashMap<&'static str, Animator<f32>>,
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            anchor: Vec2::default(),
+            position: Vec2::default(),
+            scale: Vec2 { x: 1.0, y: 1.0 },
+            rotation: 0.0,
+            opacity: 1.0,
+            animators: HashMap::new(),
+        }
+    }
 }
 
 /// Path drawing commands.
@@ -73,10 +110,12 @@ pub enum PathCommand {
 }
 
 /// Vector shape layer.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ShapeLayer {
     /// Collection of paths within the shape
     pub paths: Vec<Vec<PathCommand>>,
+    /// Animations for fill or stroke properties
+    pub animators: HashMap<&'static str, Animator<f32>>,
 }
 
 /// Placeholder types for other layer kinds.
@@ -124,5 +163,12 @@ mod tests {
         let v2 = fx.to_vec2();
         assert!((v.x - v2.x).abs() < 0.0001);
         assert!((v.y - v2.y).abs() < 0.0001);
+    }
+
+    #[test]
+    fn transform_default_animators() {
+        let t = Transform::default();
+        assert!(t.animators.is_empty());
+        assert_eq!(t.scale, Vec2 { x: 1.0, y: 1.0 });
     }
 }
