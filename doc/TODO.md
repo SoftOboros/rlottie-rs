@@ -61,7 +61,7 @@
 - [x] Shape solid fills & strokes → uses engine 2 + renderer 4
 - [x] Gradients (linear, radial) → extend Paint enum
 - [x] TrimPaths → apply length mask during tessellation
-- [ ] Masks / Mattes → layer compositing with stencil buffer
+- [x] Masks / Mattes → layer compositing with stencil buffer
 - [ ] Rounded corners → path boolean ops or explicit arc segments
 - [ ] Pre‑comp layers → recursive `Composition` render
 - [ ] Image assets → decode PNG/JPEG via `image-rs`

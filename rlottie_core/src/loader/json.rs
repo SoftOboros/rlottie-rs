@@ -80,6 +80,7 @@ pub fn from_reader<R: Read>(mut reader: R) -> Result<Composition, Box<dyn std::e
                     fill,
                     stroke,
                     stroke_width,
+                    mask: None,
                     animators: HashMap::new(),
                     trim,
                 }));
