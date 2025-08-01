@@ -114,6 +114,12 @@ pub enum PathCommand {
 pub struct ShapeLayer {
     /// Collection of paths within the shape
     pub paths: Vec<Vec<PathCommand>>,
+    /// Fill color if present
+    pub fill: Option<Color>,
+    /// Stroke color if present
+    pub stroke: Option<Color>,
+    /// Stroke width in pixels
+    pub stroke_width: f32,
     /// Animations for fill or stroke properties
     pub animators: HashMap<&'static str, Animator<f32>>,
 }
@@ -146,6 +152,10 @@ pub struct Composition {
     pub width: u32,
     /// Height in pixels
     pub height: u32,
+    /// First frame of the animation
+    pub start_frame: u32,
+    /// Last frame of the animation
+    pub end_frame: u32,
     /// Frames per second
     pub fps: f32,
     /// Flattened layer list
@@ -153,18 +163,27 @@ pub struct Composition {
 }
 
 impl Composition {
+    /// Calculate the actual frame index after applying start/end offsets and looping.
+    pub fn frame_at(&self, frame: u32) -> u32 {
+        let total = self.end_frame.saturating_sub(self.start_frame) + 1;
+        let local = frame % total;
+        self.start_frame + local
+    }
+
     /// Render a frame into the provided RGBA8888 buffer.
     pub fn render_sync(
         &self,
-        _frame: u32,
+        frame: u32,
         buffer: &mut [u8],
         width: usize,
         height: usize,
         stride: usize,
     ) {
         use crate::geometry::Path;
-        use crate::renderer::cpu::draw_path;
-        use crate::types::{Color, Paint, Vec2};
+        use crate::renderer::cpu::{draw_path, draw_stroke};
+        use crate::types::{Paint, Vec2};
+
+        let _frame_no = self.frame_at(frame);
 
         buffer.fill(0);
         let sx = width as f32 / self.width as f32;
@@ -201,19 +220,20 @@ impl Composition {
                             PathCommand::Close => path.close(),
                         }
                     }
-                    draw_path(
-                        &path,
-                        Paint::Solid(Color {
-                            r: 0,
-                            g: 0,
-                            b: 0,
-                            a: 255,
-                        }),
-                        buffer,
-                        width,
-                        height,
-                        stride,
-                    );
+                    if let Some(fill) = shape.fill {
+                        draw_path(&path, Paint::Solid(fill), buffer, width, height, stride);
+                    }
+                    if let Some(stroke) = shape.stroke {
+                        draw_stroke(
+                            &path,
+                            shape.stroke_width,
+                            Paint::Solid(stroke),
+                            buffer,
+                            width,
+                            height,
+                            stride,
+                        );
+                    }
                 }
             }
         }
