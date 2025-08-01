@@ -84,7 +84,7 @@
 
 ---
 ## 8 Validation
-- [ ] Port rlottie C++ unit tests: render PNG of frame 0/30/60, hash.
+ - [x] Port rlottie C++ unit tests: render PNG of frame 0/30/60, hash.
 - [ ] CLI tool `rlottie-diff` to compare two PNGs (root‑mean‑square error).
 - [ ] `cargo fuzz run fuzz_json` corpus from lottiefiles.zip.
 

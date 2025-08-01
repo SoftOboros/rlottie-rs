@@ -125,6 +125,15 @@ The loop runner agent operates as follows:
 - If C++ logic is unclear or unstable, skip the item and flag it with `⚠️ Needs upstream clarification`.
 - Do not touch publishing or CI setup unless explicitly told.
 
+### Corpus setup scripts
+
+- `scripts/setup_corpus.sh` builds the rlottie C++ helper and generates PNG
+  frames for each JSON in `tests/assets/corpus`, then updates
+  `tests/assets/hashes.json`.
+- `scripts/pre_checkin.sh` runs this script before executing the golden hash
+  test.
+- `scripts/setup-ci-env.sh` invokes it during CI environment preparation.
+
 ---
 
 ## TL;DR Checklist

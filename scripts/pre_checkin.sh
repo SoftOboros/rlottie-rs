@@ -12,5 +12,6 @@ else
     echo "warning: cargo-bloat not installed" >&2
 fi
 if [ -f tests/golden_hash.rs ]; then
+    "$(dirname "$0")/setup_corpus.sh"
     cargo test --test golden_hash
 fi
