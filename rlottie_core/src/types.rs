@@ -124,9 +124,16 @@ pub struct ShapeLayer {
     pub animators: HashMap<&'static str, Animator<f32>>,
 }
 
-/// Placeholder types for other layer kinds.
+/// Bitmap image layer decoded from assets.
 #[derive(Debug, Clone)]
-pub struct ImageLayer;
+pub struct ImageLayer {
+    /// Width in pixels
+    pub width: u32,
+    /// Height in pixels
+    pub height: u32,
+    /// Raw RGBA8888 pixel data
+    pub pixels: Vec<u8>,
+}
 #[derive(Debug, Clone)]
 pub struct PreCompLayer;
 #[derive(Debug, Clone)]
